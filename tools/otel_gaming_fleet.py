@@ -124,8 +124,8 @@ def main() -> int:
     region_players = {r: random.randint(8000, 40000) for r in REGIONS}
     region_cap = {r: random.randint(50000, 120000) for r in REGIONS}
     for r in REGIONS:
-        players.add(region_players[r], {"region": r})
-        capacity.add(region_cap[r], {"region": r})
+        players.add(region_players[r], _region_attrs(r))
+        capacity.add(region_cap[r], _region_attrs(r))
 
     # Baseline levels for up-down series so dashboards are non-empty
     sessions.add(12000, {"service": "session-gateway"})
@@ -135,7 +135,7 @@ def main() -> int:
     anticheat_flagged.add(40, {"service": "anticheat"})
     kafka_lag.add(1500, {"topic": "session-events"})
     for r in REGIONS:
-        mm_queue.add(random.randint(50, 400), {"region": r, "service": "matchmaking"})
+        mm_queue.add(random.randint(50, 400), _region_attrs(r, service="matchmaking"))
 
     tick = 0
     while not _stop:
@@ -149,17 +149,17 @@ def main() -> int:
         for r in REGIONS:
             delta = random.randint(-200, 400)
             if region_players[r] + delta > 1000:
-                players.add(delta, {"region": r})
+                players.add(delta, _region_attrs(r))
                 region_players[r] += delta
-            mm_queue.add(random.randint(-5, 12), {"region": r, "service": "matchmaking"})
-            mm_wait.record(random.uniform(2.0, 45.0), {"region": r})
-            mm_tickets.add(random.randint(10, 60), {"region": r})
-            mm_matches.add(random.randint(5, 40), {"region": r})
-            presence_upd.add(random.randint(50, 200), {"region": r})
-            presence_lag.record(random.uniform(5, 80), {"region": r})
-            cdn_hit.record(random.uniform(0.82, 0.98), {"region": r})
-            store_checkouts.add(random.randint(2, 25), {"region": r, "service": "store"})
-            store_hist.record(random.uniform(0.1, 2.5), {"region": r})
+            mm_queue.add(random.randint(-5, 12), _region_attrs(r, service="matchmaking"))
+            mm_wait.record(random.uniform(2.0, 45.0), _region_attrs(r))
+            mm_tickets.add(random.randint(10, 60), _region_attrs(r))
+            mm_matches.add(random.randint(5, 40), _region_attrs(r))
+            presence_upd.add(random.randint(50, 200), _region_attrs(r))
+            presence_lag.record(random.uniform(5, 80), _region_attrs(r))
+            cdn_hit.record(random.uniform(0.82, 0.98), _region_attrs(r))
+            store_checkouts.add(random.randint(2, 25), _region_attrs(r, service="store"))
+            store_hist.record(random.uniform(0.1, 2.5), _region_attrs(r))
 
         sessions.add(random.randint(-20, 50), {"service": "session-gateway"})
         auth_logins.add(random.randint(40, 120), {"result": "success", "service": "auth"})
