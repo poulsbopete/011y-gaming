@@ -68,7 +68,7 @@ export function LaunchNightDemo() {
   const matchmakingHref = kibanaApmServiceUrl(kibana, 'matchmaking');
   const dashboardsHref = kibanaDashboardsUrl(kibana);
   const rulesHref = kibanaRulesUrl(kibana);
-  const metricsHref = kibanaMetricsExplorerUrl(kibana);
+  const metricsHref = kibanaMetricsUrl(kibana);
   const [phase, setPhase] = useState('idle');
   const [series, setSeries] = useState(() => buildSeries(24, null));
   const [players, setPlayers] = useState(184_200);
@@ -185,7 +185,7 @@ export function LaunchNightDemo() {
     { href: discoverHref, label: 'Discover', primary: true },
     { href: apmHref, label: 'APM' },
     { href: matchmakingHref, label: 'Matchmaking' },
-    { href: metricsHref, label: 'Metrics' },
+    { href: metricsHref, label: 'Metrics (Discover)' },
     { href: tracesHref, label: 'Traces' },
     { href: dashboardsHref, label: 'Dashboards' },
     { href: rulesHref, label: 'Rules' },
