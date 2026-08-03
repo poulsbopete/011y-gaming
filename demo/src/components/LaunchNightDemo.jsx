@@ -173,6 +173,23 @@ export function LaunchNightDemo() {
             </>
           )}
         </PrimaryCta>
+        <PrimaryCta
+          onClick={async () => {
+            try {
+              const r = await fetch('/api/seed-metrics', { method: 'POST' });
+              const body = await r.json().catch(() => ({}));
+              if (!r.ok) {
+                pushLog(`Seed failed: ${body.error || r.status}`);
+                return;
+              }
+              pushLog('Seeded live OTLP metrics → Elastic (wait ~30s, then open Discover)');
+            } catch (e) {
+              pushLog(`Seed error: ${e instanceof Error ? e.message : String(e)}`);
+            }
+          }}
+        >
+          Seed live metrics
+        </PrimaryCta>
       </ModuleHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
