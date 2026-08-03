@@ -42,7 +42,10 @@ HEADERS = {
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 WORKFLOWS_DIR = os.path.join(ROOT, "workflows")
-DEFAULT_FILES = ("metrics-adoption-recommendations.yaml",)
+DEFAULT_FILES = (
+    "metrics-adoption-recommendations.yaml",
+    "aether-dashboard-briefs.yaml",
+)
 
 
 def _http_json(method: str, path: str, body=None):
@@ -189,7 +192,9 @@ def main() -> int:
     for f in files:
         if deploy_workflow(f) is None:
             ok = False
-    print("==> Done. Manual run: Management → Workflows → Metrics adoption — AI dashboard notes")
+    print("==> Done. Manual run: Management → Workflows →")
+    print("    • Metrics adoption — AI dashboard notes")
+    print("    • Aether — dashboard briefs (Agent Builder)")
     return 0 if ok else 1
 
 

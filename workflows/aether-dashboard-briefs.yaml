@@ -1,0 +1,119 @@
+version: "1"
+name: Aether — dashboard briefs (Agent Builder)
+description: |
+  Manual (and optional scheduled) run: Agent Builder produces a **high-level brief for each
+  Aether Games Kibana dashboard** — what the board shows, how to read golden signals, and
+  **steps to resolve** when metrics or panels look unhealthy (errors, empty series, broken lenses).
+
+  Indexes into **aether-dashboard-briefs** and refreshes Markdown **workshop-aether-dashboard-briefs**
+  for attach / library use in the workshop.
+enabled: true
+tags:
+  - aether-games
+  - dashboards
+  - agent-builder
+  - metrics-adoption
+  - DEMO
+triggers:
+  - type: manual
+  - type: scheduled
+    with:
+      every: "30m"
+
+consts:
+  dashboard_catalog: |
+    1. Aether — Platform overview — RPS, error rate, latency, concurrent players, request rate by service
+    2. Aether — Matchmaking — queue depth, wait time, tickets/sec, matches, region breakdowns
+    3. Aether — Session gateway — gateway RPS, 5xx, active sessions, connect latency
+    4. Aether — Region capacity — concurrent players vs capacity by region
+    5. Aether — Auth / login — login success/failure, auth latency
+    6. Aether — Store / checkout — checkout volume and duration
+    7. Aether — Voice / chat — voice sessions and chat message rate
+    8. Aether — Launch SLO — error-budget style launch availability signal
+    9. Aether — Party / social — parties, invites, party latency
+    10. Aether — Presence — presence updates/s, online users, fan-out lag, by region
+    11. Aether — Inventory — entitlement grants and grant latency
+    12. Aether — Anti-cheat signals — signal volume and flagged sessions
+    13. Aether — CDN / edge — cache hit ratio and edge latency
+    14. Aether — Dependency latency — postgres / redis / kafka dependency timings
+
+steps:
+  - name: workflow-start
+    type: console
+    with:
+      message: |
+        Aether dashboard briefs started (execution {{ execution.id }}).
+        Agent Builder will summarize each Aether board and remediation steps for open issues.
+
+  # Index is created on first _doc write (or by ensure_ai_recommendation_panels-style helpers).
+  - name: agent_dashboard_briefs
+    type: ai.agent
+    with:
+      message: |
+        You are an Elastic Observability SRE coach for the fictional AAA studio **Aether Games**.
+
+        Telemetry path in this workshop: OpenTelemetry → Grafana Alloy → Elastic managed OTLP (mOTLP).
+        Indices: **metrics-***, **logs-***, **traces-***. Service resource often appears as
+        **service.name** (e.g. aether-games-fleet, matchmaking, auth). Region attributes are usually
+        top-level **region** (not cloud.region) on workshop metrics.
+
+        Dashboard catalog (one section each):
+        {{ consts.dashboard_catalog }}
+
+        Produce markdown (max ~80 lines) with **one H3 section per dashboard** in catalog order.
+        For each dashboard include exactly these subsections:
+        - **Shows** — 1–2 sentences on what operators use the board for
+        - **Read** — 2–4 bullets on which golden signals matter (RPS, errors, latency, queue, players, etc.)
+        - **Issues & resolve** — If healthy: say "No acute issue — continue monitoring."
+          If there *could* be an issue on this board type, list concrete Kibana steps. Prefer these
+          known workshop failure modes when relevant:
+          1. **Panel error `histogram_quantile` / illegal_argument_exception on latency** → replace PromQL
+             with avg `sum(rate(*_sum[5m]))/sum(rate(*_count[5m]))`, re-run Lab 1 migrate, or open
+             Discover ES|QL on http_request_duration_seconds_* .
+          2. **Unknown column cloud.region** → panels expect ECS cloud.region but OTLP emits **region**;
+             run `python3 tools/patch_aether_dashboard_region_fields.py --search Aether` or remigrate
+             after the Lab 1 patch step; confirm with Discover `| STATS c = COUNT(*) BY region`.
+          3. **High error rate (e.g. >10% on Platform overview)** → filter status=~5.. / status 5xx in
+             Discover; correlate Auth + Session gateway; check A2A stub / Security fraud seed if auth spike.
+          4. **Empty region / queue charts** → restart fleet
+             `WORKSHOP_FORCE_OTEL_RESTART=1 bash scripts/start_workshop_otel.sh`, wait 1–2 minutes.
+          5. **APM Services empty** → seed OTLP traces (Vercel Seed live metrics or workshop fleet) and
+             open APM with kuery on matchmaking/auth/session-gateway.
+
+        End with a short **Ops checklist** (5 bullets) for launch night: seed → Platform overview →
+        Matchmaking → Auth → open Alerts/Rules drafts (disabled until reviewed).
+
+        Do not invent cluster hostnames. Keep language actionable for Instruqt + Kibana.
+
+  - name: index_brief
+    type: elasticsearch.request
+    with:
+      method: POST
+      path: /aether-dashboard-briefs/_doc
+      body:
+        "@timestamp": "{{ now | date: '%Y-%m-%dT%H:%M:%SZ' }}"
+        execution_id: "{{ execution.id }}"
+        workflow_name: "{{ workflow.name }}"
+        source: agent_builder_dashboard_briefs
+        dashboard_count: 14
+        brief: "{{ steps.agent_dashboard_briefs.output.message }}"
+
+  - name: publish_markdown
+    type: kibana.request
+    with:
+      method: POST
+      path: /api/saved_objects/markdown/workshop-aether-dashboard-briefs?overwrite=true
+      headers:
+        kbn-xsrf: "true"
+      body:
+        attributes:
+          title: "Aether — AI dashboard briefs"
+          description: "Agent Builder summaries + remediation steps per Aether Games dashboard"
+          content: "{{ steps.agent_dashboard_briefs.output.message }}"
+
+  - name: workflow-done
+    type: console
+    with:
+      message: |
+        Indexed brief to aether-dashboard-briefs and refreshed Markdown **workshop-aether-dashboard-briefs**.
+        Open Management → Workflows for this run, or Dashboards → search "Aether — AI dashboard briefs".

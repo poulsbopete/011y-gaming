@@ -140,7 +140,7 @@ if [ "${WORKSHOP_SKIP_AI_NOTES:-0}" = "1" ]; then
 else
   "${PY}" "${ROOT}/scripts/ensure_ai_recommendation_panels.py" --platform grafana --seed-now \
     || echo "    WARN: ensure_ai_recommendation_panels.py failed (dashboards still uploaded)." >&2
-  "${PY}" "${ROOT}/scripts/deploy_workshop_workflows.py" metrics-adoption-recommendations.yaml \
+  "${PY}" "${ROOT}/scripts/deploy_workshop_workflows.py" \
     || echo "    WARN: deploy_workshop_workflows.py failed (AI notes panels may still work via --seed-now)." >&2
 fi
 
