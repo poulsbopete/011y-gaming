@@ -57,3 +57,31 @@ body {
 .pulse-line {
   animation: pulse-line 3.2s ease-in-out infinite;
 }
+
+@keyframes a2a-flow {
+  0%, 100% { opacity: 0.5; transform: translateX(0); }
+  50% { opacity: 1; transform: translateX(4px); }
+}
+
+@keyframes panel-glow-cyan {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0); }
+  50% { box-shadow: 0 0 24px -4px rgba(34, 211, 238, 0.25); }
+}
+
+@keyframes panel-glow-amber {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+  50% { box-shadow: 0 0 24px -4px rgba(251, 191, 36, 0.22); }
+}
+
+.a2a-bridge {
+  animation: a2a-flow 2.8s ease-in-out infinite;
+}
+
+.a2a-panel-o11y {
+  animation: panel-glow-cyan 5s ease-in-out infinite;
+}
+
+.a2a-panel-sec {
+  animation: panel-glow-amber 5s ease-in-out 0.8s infinite;
+}
+
