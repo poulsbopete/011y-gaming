@@ -3,13 +3,16 @@ import { Play, RotateCcw } from 'lucide-react';
 import { ModuleHeader, StatCard, DeepLinkBar, PrimaryCta } from './ui';
 import {
   getO11yKibanaUrl,
+  kibanaHostLabel,
   kibanaDiscoverUrl,
   kibanaObservabilityServicesUrl,
+  kibanaApmServiceUrl,
   kibanaDashboardsUrl,
   kibanaRulesUrl,
+  kibanaMetricsExplorerUrl,
   AETHER_AUTH_ESQL,
-  AETHER_MATCHMAKING_ESQL,
   AETHER_DISCOVER_ESQL,
+  AETHER_TRACES_ESQL,
 } from '../lib/elastic-api';
 
 const WORKFLOW_STEPS = [
@@ -51,6 +54,14 @@ function Sparkline({ series, accent = '#22d3ee' }) {
 
 export function LaunchNightDemo() {
   const kibana = getO11yKibanaUrl();
+  const project = kibanaHostLabel(kibana);
+  const discoverHref = kibanaDiscoverUrl(kibana, { query: AETHER_DISCOVER_ESQL });
+  const tracesHref = kibanaDiscoverUrl(kibana, { query: AETHER_TRACES_ESQL });
+  const apmHref = kibanaObservabilityServicesUrl(kibana);
+  const matchmakingHref = kibanaApmServiceUrl(kibana, 'matchmaking');
+  const dashboardsHref = kibanaDashboardsUrl(kibana);
+  const rulesHref = kibanaRulesUrl(kibana);
+  const metricsHref = kibanaMetricsExplorerUrl(kibana);
   const [phase, setPhase] = useState('idle'); // idle | running | resolved
   const [series, setSeries] = useState(() => buildSeries(24, null));
   const [players, setPlayers] = useState(184_200);
@@ -150,14 +161,17 @@ export function LaunchNightDemo() {
       <ModuleHeader
         eyebrow="Launch night"
         title="Run a launch-window incident"
-        subtitle="One click walks matchmaking spike → auth correlation → A2A Security hint → remediation. Then open the same story in live Kibana."
+        subtitle={`Links open live Kibana on ${project}. Seed metrics+traces first so APM Services and Discover show Aether data.`}
       >
         <DeepLinkBar
           links={[
-            { href: kibanaDiscoverUrl(kibana, { query: AETHER_MATCHMAKING_ESQL }), label: 'Discover', primary: true },
-            { href: kibanaObservabilityServicesUrl(kibana), label: 'APM' },
-            { href: kibanaDashboardsUrl(kibana), label: 'Dashboards' },
-            { href: kibanaRulesUrl(kibana), label: 'Rules' },
+            { href: discoverHref, label: 'Discover', primary: true },
+            { href: apmHref, label: 'APM' },
+            { href: matchmakingHref, label: 'Matchmaking' },
+            { href: metricsHref, label: 'Metrics' },
+            { href: tracesHref, label: 'Traces' },
+            { href: dashboardsHref, label: 'Dashboards' },
+            { href: rulesHref, label: 'Rules' },
           ]}
         />
         <PrimaryCta onClick={runIncident} disabled={phase === 'running'}>
@@ -182,7 +196,7 @@ export function LaunchNightDemo() {
                 pushLog(`Seed failed: ${body.error || r.status}`);
                 return;
               }
-              pushLog('Seeded live OTLP metrics → Elastic (wait ~30s, then open Discover)');
+              pushLog(`Seeded metrics+traces → ${project} (wait ~30s, then open APM / Discover)`);
             } catch (e) {
               pushLog(`Seed error: ${e instanceof Error ? e.message : String(e)}`);
             }
@@ -192,32 +206,42 @@ export function LaunchNightDemo() {
         </PrimaryCta>
       </ModuleHeader>
 
+      <p className="mb-6 text-xs text-mist">
+        Live project:{' '}
+        <a href={kibana} target="_blank" rel="noopener noreferrer" className="text-cyan hover:text-amber font-mono">
+          {project}
+        </a>
+        {' · '}
+        Click any chip or KPI to open that view in Elastic (new tab).
+      </p>
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <StatCard
           label="Concurrent players"
           value={players.toLocaleString()}
-          trend={phase === 'running' ? 'Evening peak surge' : 'Global online'}
-          href={kibanaDiscoverUrl(kibana, { query: AETHER_DISCOVER_ESQL })}
+          trend={phase === 'running' ? 'Evening peak surge' : 'Open Discover services'}
+          href={discoverHref}
         />
         <StatCard
           label="Matchmaking queue"
           value={queue.toLocaleString()}
-          trend={queue > 1500 ? 'Elevated — players waiting' : 'Healthy'}
+          trend={queue > 1500 ? 'Elevated — open APM matchmaking' : 'Open APM matchmaking'}
           accent={queue > 1500 ? 'amber' : 'cyan'}
-          href={kibanaDiscoverUrl(kibana, { query: AETHER_MATCHMAKING_ESQL })}
+          href={matchmakingHref}
         />
         <StatCard
           label="Auth failure %"
           value={authFail.toFixed(1)}
           unit="%"
-          trend={authFail > 5 ? 'Spike — correlate with Security' : 'Baseline'}
+          trend={authFail > 5 ? 'Spike — open auth Discover' : 'Open auth in Discover'}
           accent={authFail > 5 ? 'amber' : 'cyan'}
           href={kibanaDiscoverUrl(kibana, { query: AETHER_AUTH_ESQL })}
         />
         <StatCard
           label="Incident phase"
           value={phase === 'idle' ? 'Ready' : phase === 'running' ? 'Active' : 'Resolved'}
-          trend="Simulated choreography"
+          trend="Open APM inventory"
+          href={apmHref}
         />
       </div>
 
@@ -231,7 +255,8 @@ export function LaunchNightDemo() {
           </div>
           <Sparkline series={series} accent={phase === 'running' ? '#fbbf24' : '#22d3ee'} />
           <p className="text-xs text-mist mt-3">
-            KPI / Discover links open live Kibana on mapped fields (service.name). Aether PromQL boards light up in the Instruqt play where the fleet writes aether_* series.
+            Chart is simulated for the POV. After <span className="text-fog">Seed live metrics</span>, APM / Discover
+            show real OTLP data in <span className="font-mono text-cyan">{project}</span>.
           </p>
         </div>
 

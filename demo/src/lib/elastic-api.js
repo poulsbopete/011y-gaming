@@ -2,9 +2,7 @@ const O11Y_DEFAULT = 'https://otel-demo-a5630c.kb.us-east-1.aws.elastic.cloud';
 const SECURITY_DEFAULT = 'https://my-security-project-ac9463.kb.us-central1.gcp.elastic.cloud';
 const TIME = { from: 'now-24h', to: 'now' };
 
-// Keep Discover deep links on mapped columns only. ES|QL verification fails on
-// unmapped names (e.g. aether_*), even inside OR — and the shared demo project
-// may not have the Instruqt fleet series. Workshop boards use PromQL on metric names.
+// Discover: prefer fleet / gaming services after Vercel OTLP seed.
 export const AETHER_DISCOVER_ESQL = [
   'FROM metrics-*',
   '| WHERE service.name IS NOT NULL',
@@ -15,7 +13,7 @@ export const AETHER_DISCOVER_ESQL = [
 
 export const AETHER_MATCHMAKING_ESQL = [
   'FROM metrics-*',
-  '| WHERE service.name IS NOT NULL',
+  '| WHERE service.name == "matchmaking" OR service.name == "aether-games-fleet"',
   '| STATS samples = COUNT(*) BY service.name',
   '| SORT samples DESC',
   '| LIMIT 10',
@@ -23,10 +21,18 @@ export const AETHER_MATCHMAKING_ESQL = [
 
 export const AETHER_AUTH_ESQL = [
   'FROM metrics-*',
-  '| WHERE service.name IS NOT NULL',
+  '| WHERE service.name == "auth" OR service.name == "aether-games-fleet"',
   '| STATS samples = COUNT(*) BY service.name',
   '| SORT samples DESC',
   '| LIMIT 10',
+].join(' ');
+
+export const AETHER_TRACES_ESQL = [
+  'FROM traces-*',
+  '| WHERE service.name IS NOT NULL',
+  '| STATS spans = COUNT(*) BY service.name',
+  '| SORT spans DESC',
+  '| LIMIT 15',
 ].join(' ');
 
 function risonQuote(str) {
@@ -65,6 +71,11 @@ export function getSecurityEsUrl() {
   return (import.meta.env.VITE_SECURITY_ES_URL || 'https://my-security-project-ac9463.es.us-central1.gcp.elastic.cloud').replace(/\/$/, '');
 }
 
+export function kibanaHostLabel(kibanaBase) {
+  const base = (kibanaBase || getO11yKibanaUrl()).replace(/^https?:\/\//, '');
+  return base.split('.')[0] || base;
+}
+
 export function kibanaDiscoverUrl(kibanaBase, { query, timeFrom = TIME.from, timeTo = TIME.to } = {}) {
   const base = (kibanaBase || getO11yKibanaUrl()).replace(/\/$/, '');
   if (!base) return null;
@@ -94,9 +105,41 @@ export function kibanaStreamsUrl(kibanaBase) {
   return `${base}/app/streams`;
 }
 
-export function kibanaObservabilityServicesUrl(kibanaBase) {
+/** APM service inventory — populated after Seed live metrics (OTLP traces). */
+export function kibanaObservabilityServicesUrl(kibanaBase, { serviceName } = {}) {
   const base = (kibanaBase || getO11yKibanaUrl()).replace(/\/$/, '');
-  return `${base}/app/apm/services?rangeFrom=now-24h&rangeTo=now`;
+  const params = new URLSearchParams({
+    comparisonEnabled: 'true',
+    environment: 'ENVIRONMENT_ALL',
+    lagAhead: 'off',
+    rangeFrom: 'now-24h',
+    rangeTo: 'now',
+  });
+  if (serviceName) {
+    params.set('kuery', `service.name : "${serviceName}"`);
+  } else {
+    params.set(
+      'kuery',
+      'service.name : "matchmaking" or service.name : "auth" or service.name : "session-gateway" or service.name : "store" or service.name : "aether-games-fleet"',
+    );
+  }
+  return `${base}/app/apm/services?${params.toString()}`;
+}
+
+export function kibanaApmServiceUrl(kibanaBase, serviceName = 'matchmaking') {
+  const base = (kibanaBase || getO11yKibanaUrl()).replace(/\/$/, '');
+  const params = new URLSearchParams({
+    comparisonEnabled: 'true',
+    environment: 'ENVIRONMENT_ALL',
+    rangeFrom: 'now-24h',
+    rangeTo: 'now',
+  });
+  return `${base}/app/apm/services/${encodeURIComponent(serviceName)}/overview?${params.toString()}`;
+}
+
+export function kibanaMetricsExplorerUrl(kibanaBase) {
+  const base = (kibanaBase || getO11yKibanaUrl()).replace(/\/$/, '');
+  return `${base}/app/metrics/explorer`;
 }
 
 export function kibanaRulesUrl(kibanaBase) {
