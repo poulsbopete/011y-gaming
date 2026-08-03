@@ -133,12 +133,11 @@ def _automated_alert_count(report: dict[str, Any]) -> int:
     return int(tiers.get("automated", 0) or 0)
 
 
-def _put_body(body: dict[str, Any]) -> dict[str, Any]:
-    """Serverless PUT /api/alerting/rule/{id} allowlist (example omits consumer/enabled/rule_type_id).
+PUBLISHER_VERSION = "2026-08-03c-delete-recreate"
 
-    Those fields are create-only or managed via /_enable|/_disable — sending them yields
-    ``Additional properties are not allowed``.
-    """
+
+def _put_body(body: dict[str, Any]) -> dict[str, Any]:
+    """Serverless PUT allowlist — never send consumer/enabled/rule_type_id."""
     out: dict[str, Any] = {
         "name": str(body.get("name") or "unnamed"),
         "schedule": body.get("schedule") if isinstance(body.get("schedule"), dict) else {"interval": "1m"},
@@ -146,9 +145,9 @@ def _put_body(body: dict[str, Any]) -> dict[str, Any]:
         "actions": body.get("actions") if isinstance(body.get("actions"), list) else [],
         "tags": body.get("tags") if isinstance(body.get("tags"), list) else [],
     }
-    for opt in ("alert_delay", "flapping", "notify_when", "throttle", "artifacts"):
-        if opt in body and body[opt] is not None:
-            out[opt] = body[opt]
+    # Defense in depth: never leak create-only fields even if copied later.
+    for banned in ("enabled", "consumer", "rule_type_id", "id"):
+        out.pop(banned, None)
     return out
 
 
@@ -164,9 +163,23 @@ def _set_enabled(
     path = "_enable" if enabled else "_disable"
     url = f"{kibana}/api/alerting/rule/{enc}/{path}"
     h = {k: v for k, v in headers.items() if k.lower() != "content-type"}
-    h["Content-Type"] = "application/json"
     try:
         requests.post(url, headers=h, auth=auth, timeout=60)
+    except requests.RequestException:
+        pass
+
+
+def _delete_rule(
+    kibana: str,
+    headers: dict[str, str],
+    auth: Any,
+    rule_id: str,
+) -> None:
+    enc = quote(rule_id, safe="")
+    url = f"{kibana}/api/alerting/rule/{enc}"
+    h = {k: v for k, v in headers.items() if k.lower() != "content-type"}
+    try:
+        requests.delete(url, headers=h, auth=auth, timeout=60)
     except requests.RequestException:
         pass
 
@@ -184,19 +197,37 @@ def _post_or_put(
     url = f"{kibana}/api/alerting/rule/{enc}"
     want_enabled = bool(body.get("enabled", False))
 
-    r = requests.post(url, headers=h, auth=auth, json=body, timeout=120)
-    if r.status_code in (200, 201):
+    def _create(payload: dict[str, Any]) -> requests.Response:
+        return requests.post(url, headers=h, auth=auth, json=payload, timeout=120)
+
+    def _after_create_ok() -> tuple[bool, str]:
         if not want_enabled:
             _set_enabled(kibana, headers, auth, rule_id, False)
         return True, ""
-    if r.status_code == 409 or (
+
+    r = _create(body)
+    if r.status_code in (200, 201):
+        return _after_create_ok()
+
+    exists = r.status_code == 409 or (
         r.status_code == 400 and "already exists" in (r.text or "").lower()
-    ):
+    )
+
+    # Prefer delete + recreate on Serverless — PUT schemas keep rejecting create-only fields.
+    if exists:
+        _delete_rule(kibana, headers, auth, rule_id)
+        r_new = _create(body)
+        if r_new.status_code in (200, 201):
+            return _after_create_ok()
+        # Fallback: allowlisted PUT
         r2 = requests.put(url, headers=h, auth=auth, json=_put_body(body), timeout=120)
         if r2.ok:
             _set_enabled(kibana, headers, auth, rule_id, want_enabled)
             return True, ""
-        return False, f"PUT HTTP {r2.status_code} {r2.text[:500]}"
+        return False, (
+            f"recreate HTTP {r_new.status_code} {r_new.text[:300]}; "
+            f"PUT HTTP {r2.status_code} {r2.text[:300]}"
+        )
 
     if (
         r.status_code == 400
@@ -205,17 +236,17 @@ def _post_or_put(
     ):
         alt = dict(body)
         alt["consumer"] = "stackAlerts"
-        r3 = requests.post(url, headers=h, auth=auth, json=alt, timeout=120)
+        r3 = _create(alt)
         if r3.status_code in (200, 201):
-            if not want_enabled:
-                _set_enabled(kibana, headers, auth, rule_id, False)
-            return True, ""
-        if r3.status_code == 409:
-            r4 = requests.put(url, headers=h, auth=auth, json=_put_body(alt), timeout=120)
-            if r4.ok:
-                _set_enabled(kibana, headers, auth, rule_id, want_enabled)
-                return True, ""
-            return False, f"PUT(stackAlerts) HTTP {r4.status_code} {r4.text[:500]}"
+            return _after_create_ok()
+        if r3.status_code == 409 or (
+            r3.status_code == 400 and "already exists" in (r3.text or "").lower()
+        ):
+            _delete_rule(kibana, headers, auth, rule_id)
+            r4 = _create(alt)
+            if r4.status_code in (200, 201):
+                return _after_create_ok()
+            return False, f"POST(stackAlerts recreate) HTTP {r4.status_code} {r4.text[:400]}"
         return False, f"POST(observability) HTTP {r.status_code}; POST(stackAlerts) HTTP {r3.status_code} {r3.text[:400]}"
 
     return False, f"HTTP {r.status_code} {r.text[:600]}"
@@ -250,6 +281,7 @@ def main() -> int:
         return 0
 
     kibana, headers, auth = kibana_client()
+    print(f"publisher_version={PUBLISHER_VERSION}")
     ok = 0
     skipped = 0
     failed: list[str] = []
