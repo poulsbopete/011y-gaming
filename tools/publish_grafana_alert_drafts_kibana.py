@@ -134,11 +134,41 @@ def _automated_alert_count(report: dict[str, Any]) -> int:
 
 
 def _put_body(body: dict[str, Any]) -> dict[str, Any]:
-    """Kibana rule PUT rejects create-only / read-only fields (rule_type_id, consumer)."""
-    b = dict(body)
-    for key in ("rule_type_id", "consumer", "id", "created_by", "updated_by", "created_at", "updated_at"):
-        b.pop(key, None)
-    return b
+    """Serverless PUT /api/alerting/rule/{id} allowlist (example omits consumer/enabled/rule_type_id).
+
+    Those fields are create-only or managed via /_enable|/_disable — sending them yields
+    ``Additional properties are not allowed``.
+    """
+    out: dict[str, Any] = {
+        "name": str(body.get("name") or "unnamed"),
+        "schedule": body.get("schedule") if isinstance(body.get("schedule"), dict) else {"interval": "1m"},
+        "params": body.get("params") if isinstance(body.get("params"), dict) else {},
+        "actions": body.get("actions") if isinstance(body.get("actions"), list) else [],
+        "tags": body.get("tags") if isinstance(body.get("tags"), list) else [],
+    }
+    for opt in ("alert_delay", "flapping", "notify_when", "throttle", "artifacts"):
+        if opt in body and body[opt] is not None:
+            out[opt] = body[opt]
+    return out
+
+
+def _set_enabled(
+    kibana: str,
+    headers: dict[str, str],
+    auth: Any,
+    rule_id: str,
+    enabled: bool,
+) -> None:
+    """Enable/disable via dedicated endpoints (not allowed on Serverless PUT body)."""
+    enc = quote(rule_id, safe="")
+    path = "_enable" if enabled else "_disable"
+    url = f"{kibana}/api/alerting/rule/{enc}/{path}"
+    h = {k: v for k, v in headers.items() if k.lower() != "content-type"}
+    h["Content-Type"] = "application/json"
+    try:
+        requests.post(url, headers=h, auth=auth, timeout=60)
+    except requests.RequestException:
+        pass
 
 
 def _post_or_put(
@@ -152,14 +182,19 @@ def _post_or_put(
     h["Content-Type"] = "application/json"
     enc = quote(rule_id, safe="")
     url = f"{kibana}/api/alerting/rule/{enc}"
+    want_enabled = bool(body.get("enabled", False))
+
     r = requests.post(url, headers=h, auth=auth, json=body, timeout=120)
     if r.status_code in (200, 201):
+        if not want_enabled:
+            _set_enabled(kibana, headers, auth, rule_id, False)
         return True, ""
     if r.status_code == 409 or (
         r.status_code == 400 and "already exists" in (r.text or "").lower()
     ):
         r2 = requests.put(url, headers=h, auth=auth, json=_put_body(body), timeout=120)
         if r2.ok:
+            _set_enabled(kibana, headers, auth, rule_id, want_enabled)
             return True, ""
         return False, f"PUT HTTP {r2.status_code} {r2.text[:500]}"
 
@@ -172,10 +207,13 @@ def _post_or_put(
         alt["consumer"] = "stackAlerts"
         r3 = requests.post(url, headers=h, auth=auth, json=alt, timeout=120)
         if r3.status_code in (200, 201):
+            if not want_enabled:
+                _set_enabled(kibana, headers, auth, rule_id, False)
             return True, ""
         if r3.status_code == 409:
             r4 = requests.put(url, headers=h, auth=auth, json=_put_body(alt), timeout=120)
             if r4.ok:
+                _set_enabled(kibana, headers, auth, rule_id, want_enabled)
                 return True, ""
             return False, f"PUT(stackAlerts) HTTP {r4.status_code} {r4.text[:500]}"
         return False, f"POST(observability) HTTP {r.status_code}; POST(stackAlerts) HTTP {r3.status_code} {r3.text[:400]}"
