@@ -10,6 +10,22 @@ export const AETHER_DISCOVER_ESQL = [
   '| LIMIT 15',
 ].join(' ');
 
+export const AETHER_MATCHMAKING_ESQL = [
+  'FROM metrics-*',
+  '| WHERE service.name == "matchmaking" OR aether_matchmaking_queue_depth IS NOT NULL',
+  '| STATS samples = COUNT(*) BY service.name',
+  '| SORT samples DESC',
+  '| LIMIT 10',
+].join(' ');
+
+export const AETHER_AUTH_ESQL = [
+  'FROM metrics-*',
+  '| WHERE service.name == "auth" OR aether_auth_logins_total IS NOT NULL',
+  '| STATS samples = COUNT(*) BY service.name',
+  '| SORT samples DESC',
+  '| LIMIT 10',
+].join(' ');
+
 function risonQuote(str) {
   if (/^[\w\-.*@]+$/.test(str)) return str;
   return `'${String(str).replace(/'/g, "!'")}'`;

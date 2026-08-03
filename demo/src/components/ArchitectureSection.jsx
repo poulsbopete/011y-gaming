@@ -20,15 +20,19 @@ const SEC_ITEMS = [
   'multi-account abuse',
 ];
 
-export function ArchitectureSection() {
+export function ArchitectureSection({ embedded = false } = {}) {
   const o11yKibana = getO11yKibanaUrl();
   const o11yEs = getO11yEsUrl().replace(/^https?:\/\//, '');
   const securityEs = getSecurityEsUrl().replace(/^https?:\/\//, '');
   const o11yProject = o11yEs.split('.')[0] || 'otel-demo-a5630c';
   const securityProject = securityEs.split('.')[0] || 'my-security-project-ac9463';
 
+  const shellClass = embedded
+    ? 'relative overflow-hidden'
+    : 'relative px-6 py-20 md:py-28 border-t border-white/8 overflow-hidden';
+
   return (
-    <section id="architecture" className="relative px-6 py-20 md:py-28 border-t border-white/8 overflow-hidden">
+    <section id="architecture" className={shellClass}>
       <div
         className="pointer-events-none absolute inset-0 opacity-40"
         style={{
@@ -37,7 +41,7 @@ export function ArchitectureSection() {
         }}
       />
 
-      <div className="relative mx-auto max-w-5xl">
+      <div className={embedded ? 'relative' : 'relative mx-auto max-w-5xl'}>
         <p className="text-xs uppercase tracking-[0.2em] text-amber mb-3 font-medium">A2A architecture</p>
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
           <div>

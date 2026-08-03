@@ -1,5 +1,6 @@
-import { Section } from './ui';
+import { ModuleHeader } from './ui';
 import { Gauge, Layers, Wallet } from 'lucide-react';
+import { getInstruqtInviteUrl } from '../lib/elastic-api';
 
 const POINTS = [
   {
@@ -20,14 +21,15 @@ const POINTS = [
 ];
 
 export function MigrateSection() {
+  const invite = getInstruqtInviteUrl();
   return (
-    <Section
-      id="migrate"
-      eyebrow="Prom → Elastic"
-      title="Meet platform teams where they already work"
-      lead="Engineers don't change tools — we meet them where they are. Bring Aether Games Prom/Grafana assets into Elastic without a rewrite."
-    >
-      <div className="grid md:grid-cols-3 gap-10 md:gap-8">
+    <div>
+      <ModuleHeader
+        eyebrow="Prom → Elastic"
+        title="Meet platform teams where they already work"
+        subtitle="Bring Aether Games Prom/Grafana assets into Elastic without a rewrite. Hands-on path is the Instruqt workshop."
+      />
+      <div className="grid md:grid-cols-3 gap-8 mb-10">
         {POINTS.map(({ icon: Icon, title, body }) => (
           <div key={title}>
             <Icon className="w-6 h-6 text-cyan mb-4" strokeWidth={1.5} />
@@ -36,10 +38,18 @@ export function MigrateSection() {
           </div>
         ))}
       </div>
-      <p className="mt-12 text-sm text-mist/80 max-w-2xl">
-        Hands-on path: the Instruqt workshop migrates fourteen Aether Games Grafana boards onto ephemeral Observability Serverless via{' '}
-        <code className="text-cyan/90 text-xs">grafana-migrate</code>.
+      <p className="text-sm text-mist max-w-2xl">
+        Workshop command:{' '}
+        <code className="text-cyan/90 text-xs">bash /root/workshop/scripts/migrate_grafana_dashboards_to_serverless.sh</code>
+        {invite && (
+          <>
+            {' · '}
+            <a href={invite} target="_blank" rel="noopener noreferrer" className="text-cyan hover:text-amber">
+              Open Instruqt invite →
+            </a>
+          </>
+        )}
       </p>
-    </Section>
+    </div>
   );
 }

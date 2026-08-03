@@ -85,3 +85,12 @@ body {
   animation: panel-glow-amber 5s ease-in-out 0.8s infinite;
 }
 
+@keyframes count-pop {
+  from { opacity: 0.4; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-count {
+  animation: count-pop 0.35s ease-out both;
+}
+
