@@ -69,7 +69,7 @@ BOARDS: list[tuple[str, str, str, list[dict]]] = [
         [
             panel_stat("RPS (all services)", "sum(rate(http_requests_total[5m]))", 0, 0),
             panel_stat("Error rate", 'sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))', 6, 0, unit="percentunit"),
-            panel_stat("p95 latency", "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))", 12, 0, unit="s"),
+            panel_stat("Avg latency", "sum(rate(http_request_duration_seconds_sum[5m])) / sum(rate(http_request_duration_seconds_count[5m]))", 12, 0, unit="s"),
             panel_stat("Concurrent players", "sum(aether_concurrent_players)", 18, 0),
             panel_ts("Request rate by service", "sum(rate(http_requests_total[5m])) by (service)", 0, 6, w=24),
         ],
@@ -95,7 +95,7 @@ BOARDS: list[tuple[str, str, str, list[dict]]] = [
             panel_stat("Gateway RPS", 'sum(rate(http_requests_total{service="session-gateway"}[5m]))', 0, 0),
             panel_stat("5xx rate", 'sum(rate(http_requests_total{service="session-gateway",status=~"5.."}[5m]))', 6, 0),
             panel_stat("Active sessions", "sum(aether_active_sessions)", 12, 0),
-            panel_stat("p95 connect", 'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service="session-gateway"}[5m])) by (le))', 18, 0, unit="s"),
+            panel_stat("Avg connect", 'sum(rate(http_request_duration_seconds_sum{service="session-gateway"}[5m])) / sum(rate(http_request_duration_seconds_count{service="session-gateway"}[5m]))', 18, 0, unit="s"),
             panel_ts("Gateway throughput", 'sum(rate(http_requests_total{service="session-gateway"}[5m])) by (status)', 0, 6, w=24, legend="{{status}}"),
         ],
     ),
@@ -118,7 +118,7 @@ BOARDS: list[tuple[str, str, str, list[dict]]] = [
             panel_stat("Login success/s", 'sum(rate(aether_auth_logins_total{result="success"}[5m]))', 0, 0),
             panel_stat("Login failure/s", 'sum(rate(aether_auth_logins_total{result="failure"}[5m]))', 6, 0),
             panel_stat("Failure ratio", 'sum(rate(aether_auth_logins_total{result="failure"}[5m])) / sum(rate(aether_auth_logins_total[5m]))', 12, 0, unit="percentunit"),
-            panel_stat("Auth p95", 'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service="auth"}[5m])) by (le))', 18, 0, unit="s"),
+            panel_stat("Auth avg latency", 'sum(rate(http_request_duration_seconds_sum{service="auth"}[5m])) / sum(rate(http_request_duration_seconds_count{service="auth"}[5m]))', 18, 0, unit="s"),
             panel_ts("Logins by result", "sum(rate(aether_auth_logins_total[5m])) by (result)", 0, 6, w=24, legend="{{result}}"),
         ],
     ),
@@ -128,7 +128,7 @@ BOARDS: list[tuple[str, str, str, list[dict]]] = [
         "Digital store checkout latency and purchase volume.",
         [
             panel_stat("Checkouts/s", "sum(rate(aether_store_checkouts_total[5m]))", 0, 0),
-            panel_stat("Checkout p95", "histogram_quantile(0.95, sum(rate(aether_store_checkout_duration_seconds_bucket[5m])) by (le))", 6, 0, unit="s"),
+            panel_stat("Checkout avg", "sum(rate(aether_store_checkout_duration_seconds_sum[5m])) / sum(rate(aether_store_checkout_duration_seconds_count[5m]))", 6, 0, unit="s"),
             panel_stat("Store errors/s", 'sum(rate(http_requests_total{service="store",status=~"5.."}[5m]))', 12, 0),
             panel_ts("Checkout volume", "sum(rate(aether_store_checkouts_total[5m])) by (region)", 0, 6, w=24, legend="{{region}}"),
         ],
@@ -163,7 +163,7 @@ BOARDS: list[tuple[str, str, str, list[dict]]] = [
             panel_stat("Active parties", "sum(aether_active_parties)", 0, 0),
             panel_stat("Party API RPS", 'sum(rate(http_requests_total{service="party"}[5m]))', 6, 0),
             panel_stat("Friend invites/s", "sum(rate(aether_friend_invites_total[5m]))", 12, 0),
-            panel_ts("Party service latency p95", 'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service="party"}[5m])) by (le))', 0, 6, w=24, legend="p95"),
+            panel_ts("Party service avg latency", 'sum(rate(http_request_duration_seconds_sum{service="party"}[5m])) / sum(rate(http_request_duration_seconds_count{service="party"}[5m]))', 0, 6, w=24, legend="p95"),
         ],
     ),
     (
@@ -184,7 +184,7 @@ BOARDS: list[tuple[str, str, str, list[dict]]] = [
         [
             panel_stat("Inventory RPS", 'sum(rate(http_requests_total{service="inventory"}[5m]))', 0, 0),
             panel_stat("Entitlement grants/s", "sum(rate(aether_entitlement_grants_total[5m]))", 6, 0),
-            panel_stat("Grant p95", "histogram_quantile(0.95, sum(rate(aether_entitlement_grant_duration_seconds_bucket[5m])) by (le))", 12, 0, unit="s"),
+            panel_stat("Grant avg", "sum(rate(aether_entitlement_grant_duration_seconds_sum[5m])) / sum(rate(aether_entitlement_grant_duration_seconds_count[5m]))", 12, 0, unit="s"),
             panel_ts("Inventory errors", 'sum(rate(http_requests_total{service="inventory",status=~"5.."}[5m]))', 0, 6, w=24, legend="5xx"),
         ],
     ),
@@ -206,7 +206,7 @@ BOARDS: list[tuple[str, str, str, list[dict]]] = [
         [
             panel_stat("Edge RPS", 'sum(rate(http_requests_total{service="cdn-edge"}[5m]))', 0, 0),
             panel_stat("Cache hit ratio", "avg(aether_cdn_cache_hit_ratio)", 6, 0, unit="percentunit"),
-            panel_stat("Edge p95", 'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service="cdn-edge"}[5m])) by (le))', 12, 0, unit="s"),
+            panel_stat("Edge avg latency", 'sum(rate(http_request_duration_seconds_sum{service="cdn-edge"}[5m])) / sum(rate(http_request_duration_seconds_count{service="cdn-edge"}[5m]))', 12, 0, unit="s"),
             panel_ts("Cache hit by region", "avg(aether_cdn_cache_hit_ratio) by (region)", 0, 6, w=24, legend="{{region}}"),
         ],
     ),
@@ -215,10 +215,10 @@ BOARDS: list[tuple[str, str, str, list[dict]]] = [
         "Aether — Dependency latency",
         "Downstream dependency latency for platform services.",
         [
-            panel_stat("DB p95", 'histogram_quantile(0.95, sum(rate(aether_dependency_duration_seconds_bucket{dependency="postgres"}[5m])) by (le))', 0, 0, unit="s"),
-            panel_stat("Redis p95", 'histogram_quantile(0.95, sum(rate(aether_dependency_duration_seconds_bucket{dependency="redis"}[5m])) by (le))', 6, 0, unit="s"),
+            panel_stat("DB avg", 'sum(rate(aether_dependency_duration_seconds_sum{dependency="postgres"}[5m])) / sum(rate(aether_dependency_duration_seconds_count{dependency="postgres"}[5m]))', 0, 0, unit="s"),
+            panel_stat("Redis avg", 'sum(rate(aether_dependency_duration_seconds_sum{dependency="redis"}[5m])) / sum(rate(aether_dependency_duration_seconds_count{dependency="redis"}[5m]))', 6, 0, unit="s"),
             panel_stat("Kafka lag", "sum(aether_kafka_consumer_lag)", 12, 0),
-            panel_ts("Dependency latency", "histogram_quantile(0.95, sum(rate(aether_dependency_duration_seconds_bucket[5m])) by (le, dependency))", 0, 6, w=24, legend="{{dependency}}"),
+            panel_ts("Dependency latency", "sum(rate(aether_dependency_duration_seconds_sum[5m])) by (dependency) / sum(rate(aether_dependency_duration_seconds_count[5m])) by (dependency)", 0, 6, w=24, legend="{{dependency}}"),
         ],
     ),
 ]

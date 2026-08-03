@@ -150,7 +150,7 @@
     },
     {
       "type": "stat",
-      "title": "p95 connect",
+      "title": "Avg connect",
       "gridPos": {
         "h": 6,
         "w": 6,
@@ -163,7 +163,7 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service=\"session-gateway\"}[5m])) by (le))",
+          "expr": "sum(rate(http_request_duration_seconds_sum{service=\"session-gateway\"}[5m])) / sum(rate(http_request_duration_seconds_count{service=\"session-gateway\"}[5m]))",
           "legendFormat": "",
           "refId": "A"
         }

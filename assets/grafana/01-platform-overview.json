@@ -109,7 +109,7 @@
     },
     {
       "type": "stat",
-      "title": "p95 latency",
+      "title": "Avg latency",
       "gridPos": {
         "h": 6,
         "w": 6,
@@ -122,7 +122,7 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+          "expr": "sum(rate(http_request_duration_seconds_sum[5m])) / sum(rate(http_request_duration_seconds_count[5m]))",
           "legendFormat": "",
           "refId": "A"
         }

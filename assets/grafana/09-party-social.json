@@ -150,7 +150,7 @@
     },
     {
       "type": "timeseries",
-      "title": "Party service latency p95",
+      "title": "Party service avg latency",
       "gridPos": {
         "h": 8,
         "w": 24,
@@ -163,7 +163,7 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service=\"party\"}[5m])) by (le))",
+          "expr": "sum(rate(http_request_duration_seconds_sum{service=\"party\"}[5m])) / sum(rate(http_request_duration_seconds_count{service=\"party\"}[5m]))",
           "legendFormat": "p95",
           "refId": "A"
         }
