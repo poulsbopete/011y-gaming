@@ -9,7 +9,7 @@ import {
   kibanaApmServiceUrl,
   kibanaDashboardsUrl,
   kibanaRulesUrl,
-  kibanaMetricsExplorerUrl,
+  kibanaMetricsUrl,
   AETHER_AUTH_ESQL,
   AETHER_DISCOVER_ESQL,
   AETHER_TRACES_ESQL,
