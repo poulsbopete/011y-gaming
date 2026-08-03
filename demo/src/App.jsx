@@ -1,4 +1,5 @@
 import { Hero } from './components/Hero';
+import { WhyElasticSection } from './components/WhyElasticSection';
 import { MigrateSection } from './components/MigrateSection';
 import { ObservabilitySection } from './components/ObservabilitySection';
 import { FraudSection } from './components/FraudSection';
@@ -11,6 +12,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-arena text-fog">
       <Hero />
+      <WhyElasticSection />
       <MigrateSection />
       <ObservabilitySection />
       <FraudSection />

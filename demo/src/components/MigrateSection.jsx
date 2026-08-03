@@ -5,17 +5,17 @@ const POINTS = [
   {
     icon: Layers,
     title: 'Keep what you built',
-    body: 'PromQL panels and Grafana boards are assets. Migrate intent into Kibana instead of redrawing every chart before the next title launch.',
+    body: 'Grafana dashboards, PromQL queries, and alerting rules — all kept. Elastic becomes the backend underneath: faster, cheaper, unified.',
   },
   {
     icon: Gauge,
     title: 'One operations plane',
-    body: 'Metrics land beside logs and traces on Observability Serverless — stop pivoting Grafana mid-incident when matchmaking or auth burns.',
+    body: 'Metrics beside logs and traces on Observability Serverless — one platform, one bill when matchmaking or auth burns on launch night.',
   },
   {
     icon: Wallet,
-    title: 'Better price point',
-    body: 'Serverless consumption scales with player peaks. Avoid year-round peak provisioning for a metrics stack sized to launch weekends.',
+    title: 'Same-day cutover path',
+    body: 'Connect Grafana, auto-convert boards and rules, go live in Kibana — migrate overnight, not over quarters.',
   },
 ];
 
@@ -24,8 +24,8 @@ export function MigrateSection() {
     <Section
       id="migrate"
       eyebrow="Prom → Elastic"
-      title="Consolidate platform telemetry without a rewrite"
-      lead="AAA studios running Prometheus and Grafana can bring dashboards, alerts, and Prom metrics into Elastic Observability — draft-first governance included."
+      title="Meet platform teams where they already work"
+      lead="Engineers don't change tools — we meet them where they are. Bring Aether Games Prom/Grafana assets into Elastic without a rewrite."
     >
       <div className="grid md:grid-cols-3 gap-10 md:gap-8">
         {POINTS.map(({ icon: Icon, title, body }) => (

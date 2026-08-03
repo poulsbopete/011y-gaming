@@ -29,6 +29,7 @@ export function Hero() {
           Aether <span className="text-cyan">Games</span>
         </div>
         <div className="hidden sm:flex items-center gap-6 text-sm text-mist">
+          <a href="#why-elastic" className="hover:text-cyan transition-colors">Why Elastic</a>
           <a href="#migrate" className="hover:text-cyan transition-colors">Migrate</a>
           <a href="#observability" className="hover:text-cyan transition-colors">Observability</a>
           <a href="#fraud" className="hover:text-cyan transition-colors">Fraud</a>
