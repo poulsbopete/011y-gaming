@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# Quick checks: is Grafana Alloy up, are OTLP emitters running, do local ports answer?
+# Run on the workshop VM:  cd /root/workshop && source ~/.bashrc && ./scripts/check_workshop_otel_pipeline.sh
+set -u
+
+echo "=== Workshop OTLP / Alloy diagnostics ==="
+echo
+
+if [ -f /root/.bashrc ]; then
+  # shellcheck disable=SC1090
+  source /root/.bashrc 2>/dev/null || true
+fi
+
+if [ -n "${WORKSHOP_OTLP_ENDPOINT:-}" ]; then
+  echo "WORKSHOP_OTLP_ENDPOINT: set (Alloy can export to Elastic mOTLP)"
+else
+  echo "WORKSHOP_OTLP_ENDPOINT: NOT SET in env — ./scripts/start_workshop_otel.sh derives it from ES_URL (.es.→.ingest.) or KIBANA_URL on Serverless"
+  if [ -n "${ES_URL:-}" ] && [[ "$ES_URL" == *".es."* ]]; then
+    _d="${ES_URL%/}"
+    _d="${_d//.es./.ingest.}"
+    echo "  (would be: $_d)"
+  fi
+fi
+if [ -n "${WORKSHOP_OTLP_AUTH_HEADER:-}" ] || [ -n "${ES_API_KEY:-}" ]; then
+  echo "API key for OTLP: present (ES_API_KEY or WORKSHOP_OTLP_AUTH_HEADER)"
+else
+  echo "API key for OTLP: missing — export ES_API_KEY after source ~/.bashrc"
+fi
+echo
+
+echo "--- Processes (alloy + Python emitters) ---"
+pgrep -af '[a]lloy run' || echo "  (no alloy run … process)"
+pgrep -af '[o]tel_gaming_fleet' || echo "  (no otel_gaming_fleet.py)"
+pgrep -af '[o]tel_workshop_fleet' || true
+echo
+
+echo "--- Listening ports (OTLP gRPC 4317, OTLP HTTP 4318, Alloy self-metrics 12345) ---"
+if command -v ss >/dev/null 2>&1; then
+  ss -tlnp 2>/dev/null | grep -E ':(4317|4318|12345)([[:space:]]|$)' || echo "  (none of 4317/4318/12345 listening — Alloy probably not running)"
+elif command -v netstat >/dev/null 2>&1; then
+  netstat -tln 2>/dev/null | grep -E '4317|4318|12345' || echo "  (none listening)"
+else
+  echo "  (install ss or netstat to list ports)"
+fi
+echo
+
+echo "--- Alloy self-metrics (Prometheus scrape target) ---"
+# Do not pipe curl to head without pipefail — an empty/failed curl still yields exit 0 from head.
+if _motlp_body=$(curl -sf --max-time 3 "http://127.0.0.1:12345/metrics" 2>/dev/null) && [ -n "${_motlp_body}" ]; then
+  echo "${_motlp_body}" | head -n 5
+  echo "  … http://127.0.0.1:12345/metrics responds (Alloy internal telemetry is live)"
+else
+  echo "  FAIL: no response from http://127.0.0.1:12345/metrics"
+fi
+unset _motlp_body 2>/dev/null || true
+echo
+
+echo "--- Recent log lines ---"
+for f in /tmp/workshop-alloy.log /tmp/workshop-fleet.log /tmp/workshop-fleet-supervisor.log /tmp/workshop-datadog-otel.log; do
+  echo ">>> $f"
+  tail -n 12 "$f" 2>/dev/null || echo "  (file missing)"
+  echo
+done
+
+echo "=== If Alloy is down ==="
+echo "  cd /root/workshop && source ~/.bashrc && ./scripts/start_workshop_otel.sh"
+echo "=== If Alloy is up but Elastic has no data ==="
+echo "  tail -50 /tmp/workshop-alloy.log   # look for export errors to mOTLP"
+echo "  echo \"\\\$WORKSHOP_OTLP_ENDPOINT\" should be the HTTPS base URL from Kibana (no /v1/traces path)."
+echo "=== Discover shows no metrics-* ==="
+echo "  Default Discover index pattern often omits broad metrics-* — add \`,metrics-*\` to the pattern or use ES|QL:"
+echo "  Observability → Discover → ES|QL:  FROM metrics-* | LIMIT 10"
+echo "  If the table has rows but charts are empty, shorten the time range (e.g. Last 15m) and end at now."

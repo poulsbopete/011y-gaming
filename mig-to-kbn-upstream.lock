@@ -1,0 +1,10 @@
+# Unmodified snapshot from elastic/observability-migration-platform (workshop directory: mig-to-kbn/)
+# Refresh: ./scripts/update_mig_to_kbn.sh
+# Verify:  ./scripts/verify_mig_to_kbn_upstream.sh
+
+repository=https://github.com/elastic/observability-migration-platform
+ref=main
+commit=f6409682be0e752ed1779273cd468d0894e52c6c
+subject=fix(seeder): seed IS [NOT] NULL-only fields and RLIKE filter values (#128) (#137)
+updated_utc=2026-06-17T15:26:10Z
+workshop_patches=scripts/patches/ensure_data_view-id-title.patch

@@ -1,0 +1,4 @@
+#!/bin/bash
+set -euxo pipefail
+chmod +x /root/workshop/scripts/*.sh 2>/dev/null || true
+bash /root/workshop/scripts/migrate_grafana_dashboards_to_serverless.sh || true

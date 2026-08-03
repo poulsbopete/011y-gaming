@@ -1,0 +1,10 @@
+#!/bin/bash
+set -euo pipefail
+cd /root/workshop
+
+if [ -f build/a2a-stub/security-fraud-correlation.json ]; then
+  echo "Lab 2 checks passed (A2A stub present)."
+  exit 0
+fi
+
+fail-message "Expected build/a2a-stub/security-fraud-correlation.json. Run: bash /root/workshop/scripts/publish_alerts_and_a2a_stub.sh"

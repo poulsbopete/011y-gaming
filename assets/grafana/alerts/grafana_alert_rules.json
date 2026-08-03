@@ -1,0 +1,132 @@
+[
+  {
+    "uid": "aether-5xx-share",
+    "title": "Aether — High HTTP 5xx share",
+    "ruleGroup": "aether-platform",
+    "folderUID": "aether-games",
+    "condition": "C",
+    "for": "5m",
+    "noDataState": "OK",
+    "execErrState": "Error",
+    "isPaused": false,
+    "labels": {
+      "severity": "warning",
+      "studio": "aether-games"
+    },
+    "annotations": {
+      "summary": "5xx share elevated across Aether Games platform services (workshop OTLP)."
+    },
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prometheus",
+        "relativeTimeRange": { "from": 300, "to": 0 },
+        "model": {
+          "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": { "from": 0, "to": 0 },
+        "model": { "type": "reduce", "reducer": "last" }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": { "from": 0, "to": 0 },
+        "model": {
+          "type": "threshold",
+          "conditions": [{ "evaluator": { "type": "gt", "params": [0.15] } }]
+        }
+      }
+    ]
+  },
+  {
+    "uid": "aether-matchmaking-queue",
+    "title": "Aether — Matchmaking queue depth",
+    "ruleGroup": "aether-matchmaking",
+    "folderUID": "aether-games",
+    "condition": "C",
+    "for": "5m",
+    "noDataState": "OK",
+    "execErrState": "Error",
+    "isPaused": false,
+    "labels": {
+      "severity": "warning",
+      "studio": "aether-games"
+    },
+    "annotations": {
+      "summary": "Matchmaking queue depth is elevated — players waiting for matches."
+    },
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prometheus",
+        "relativeTimeRange": { "from": 300, "to": 0 },
+        "model": {
+          "expr": "sum(aether_matchmaking_queue_depth)"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": { "from": 0, "to": 0 },
+        "model": { "type": "reduce", "reducer": "last" }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": { "from": 0, "to": 0 },
+        "model": {
+          "type": "threshold",
+          "conditions": [{ "evaluator": { "type": "gt", "params": [2000] } }]
+        }
+      }
+    ]
+  },
+  {
+    "uid": "aether-auth-failures",
+    "title": "Aether — Auth login failure spike",
+    "ruleGroup": "aether-auth",
+    "folderUID": "aether-games",
+    "condition": "C",
+    "for": "5m",
+    "noDataState": "OK",
+    "execErrState": "Error",
+    "isPaused": false,
+    "labels": {
+      "severity": "critical",
+      "studio": "aether-games",
+      "a2a_hint": "correlate-with-security"
+    },
+    "annotations": {
+      "summary": "Login failure rate elevated — candidate for A2A fraud correlation with Elastic Security."
+    },
+    "data": [
+      {
+        "refId": "A",
+        "datasourceUid": "prometheus",
+        "relativeTimeRange": { "from": 300, "to": 0 },
+        "model": {
+          "expr": "sum(rate(aether_auth_logins_total{result=\"failure\"}[5m]))"
+        }
+      },
+      {
+        "refId": "B",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": { "from": 0, "to": 0 },
+        "model": { "type": "reduce", "reducer": "last" }
+      },
+      {
+        "refId": "C",
+        "datasourceUid": "__expr__",
+        "relativeTimeRange": { "from": 0, "to": 0 },
+        "model": {
+          "type": "threshold",
+          "conditions": [{ "evaluator": { "type": "gt", "params": [5] } }]
+        }
+      }
+    ]
+  }
+]

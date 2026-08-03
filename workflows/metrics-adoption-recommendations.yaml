@@ -1,0 +1,138 @@
+version: "1"
+name: Metrics adoption — AI dashboard notes
+description: |
+  Every **10 minutes** (and on manual run), calls the default Elastic AI agent (`ai.agent`)
+  once for **PromQL/Grafana-shaped** metrics adoption and once for **Datadog-shaped** metrics
+  adoption. Indexes each answer into **metrics-adoption-recommendations** and refreshes library
+  Markdown saved objects (**workshop-ai-rec-grafana**, **workshop-ai-rec-datadog**) referenced by
+  workshop dashboards.
+
+  Audience: existing Elastic customers. Purpose: metrics adoption (not competitive displacement).
+enabled: true
+tags:
+  - metrics-adoption
+  - grafana
+  - datadog
+  - otlp
+  - ai
+  - DEMO
+triggers:
+  - type: scheduled
+    with:
+      every: "10m"
+  - type: manual
+
+steps:
+  - name: workflow-start
+    type: console
+    with:
+      message: |
+        Metrics adoption AI notes started (execution {{ execution.id }}).
+        Generating Grafana- and Datadog-themed recommendations for live metrics-* dashboards.
+
+  - name: agent_grafana
+    type: ai.agent
+    with:
+      message: |
+        You are an Elastic Observability specialist helping **existing Elastic customers**
+        adopt **metrics** on Observability Serverless.
+
+        Context for this workshop sandbox:
+        - Telemetry path: OpenTelemetry → Grafana Alloy → Elastic **managed OTLP (mOTLP)**
+        - Indices: **metrics-***, **logs-***, **traces-***
+        - Migrated Grafana/PromQL boards land as Kibana Lens dashboards (e.g. Traffic overview,
+          Request rate by service, Latency p95, Error rate) using fields such as
+          **http_requests_total**, **http_request_duration_seconds_*** , **service.name**,
+          **http.route**, **host.name**
+        - Alert drafts may exist but are imported **disabled** until reviewed
+
+        Produce **concise, actionable metrics-adoption notes** (markdown, max ~35 lines):
+        1. What to validate first on the PromQL/Grafana-shaped boards (3–5 bullets tied to golden signals).
+        2. How to use Discover / ES|QL on **metrics-*** to confirm series and cardinality.
+        3. First alerts worth enabling (drafts → connectors → enforce) and why.
+        4. One short paragraph: why bringing PromQL dashboard IP onto Elastic accelerates metrics adoption
+           vs rebuilding every chart by hand.
+
+        Keep advice generic; do not invent customer host or service names beyond workshop-style examples.
+
+  - name: index_grafana
+    type: elasticsearch.request
+    with:
+      method: POST
+      path: /metrics-adoption-recommendations/_doc
+      body:
+        "@timestamp": "{{ now | date: '%Y-%m-%dT%H:%M:%SZ' }}"
+        execution_id: "{{ execution.id }}"
+        workflow_name: "{{ workflow.name }}"
+        source: workflow_ai_recommendations
+        dashboard_platform: grafana
+        recommendation: "{{ steps.agent_grafana.output.message }}"
+
+  - name: agent_datadog
+    type: ai.agent
+    with:
+      message: |
+        You are an Elastic Observability specialist helping **existing Elastic customers**
+        adopt **metrics** on Observability Serverless.
+
+        Context for this workshop sandbox:
+        - Same OTLP → mOTLP path as Lab 1; Datadog-shaped metric names also emit via the workshop fleet
+        - Indices: **metrics-***, **logs-***
+        - Migrated Datadog boards (e.g. Service overview, Host CPU, Host memory, Container throttle)
+          use an OTel field profile (**datadog-migrate --field-profile otel**)
+        - Four workshop monitors become Kibana rule **drafts** (imported disabled)
+
+        Produce **concise, actionable metrics-adoption notes** (markdown, max ~35 lines):
+        1. What to validate first on Datadog-shaped metric dashboards (infra + service golden signals).
+        2. How OTel resource attributes (**service.name**, **host.name**) replace tag-heavy DD scopes.
+        3. Monitor → Kibana rule governance: review thresholds, wire connectors, then enable.
+        4. One short paragraph: using Datadog dashboard/monitor exports as an adoption accelerator
+           for teams already on Elastic for logs/traces.
+
+        Keep advice generic; do not invent customer host names.
+
+  - name: index_datadog
+    type: elasticsearch.request
+    with:
+      method: POST
+      path: /metrics-adoption-recommendations/_doc
+      body:
+        "@timestamp": "{{ now | date: '%Y-%m-%dT%H:%M:%SZ' }}"
+        execution_id: "{{ execution.id }}"
+        workflow_name: "{{ workflow.name }}"
+        source: workflow_ai_recommendations
+        dashboard_platform: datadog
+        recommendation: "{{ steps.agent_datadog.output.message }}"
+
+  - name: publish_markdown_grafana
+    type: kibana.request
+    with:
+      method: POST
+      path: /api/saved_objects/markdown/workshop-ai-rec-grafana?overwrite=true
+      headers:
+        kbn-xsrf: "true"
+      body:
+        attributes:
+          title: "AI metrics adoption notes — Grafana / PromQL"
+          description: ""
+          content: "{{ steps.agent_grafana.output.message }}"
+
+  - name: publish_markdown_datadog
+    type: kibana.request
+    with:
+      method: POST
+      path: /api/saved_objects/markdown/workshop-ai-rec-datadog?overwrite=true
+      headers:
+        kbn-xsrf: "true"
+      body:
+        attributes:
+          title: "AI metrics adoption notes — Datadog"
+          description: ""
+          content: "{{ steps.agent_datadog.output.message }}"
+
+  - name: workflow-done
+    type: console
+    with:
+      message: |
+        Indexed grafana + datadog recommendations and refreshed **workshop-ai-rec-*** Markdown objects.
+        Open **Metrics adoption — AI notes** (or Traffic overview / Service overview) and refresh.

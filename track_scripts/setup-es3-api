@@ -1,0 +1,557 @@
+#!/bin/bash
+# Provision Observability Serverless via es3-api, proxy Kibana on :8080, then lay down workshop files.
+
+if [ -z "${PME_CLOUD_INSTRUQT_API_KEY:-}" ]; then
+  PME_CLOUD_INSTRUQT_API_KEY="${ESS_CLOUD_API_KEY:-}"
+fi
+if [ -z "${PME_CLOUD_INSTRUQT_API_KEY:-}" ]; then
+  PME_CLOUD_INSTRUQT_API_KEY="$(agent variable get PME_CLOUD_INSTRUQT_API_KEY 2>/dev/null || echo "")"
+fi
+if [ -z "${PME_CLOUD_INSTRUQT_API_KEY:-}" ]; then
+  ESS_KEY="$(agent variable get ESS_CLOUD_API_KEY 2>/dev/null || echo "")"
+  if [ -n "$ESS_KEY" ]; then
+    PME_CLOUD_INSTRUQT_API_KEY="$ESS_KEY"
+  fi
+fi
+
+if [ -z "${PME_CLOUD_INSTRUQT_API_KEY:-}" ]; then
+  echo "ERROR: Cloud API key not set. Configure Instruqt secret ESS_CLOUD_API_KEY for this track."
+  exit 1
+fi
+export PME_CLOUD_INSTRUQT_API_KEY
+
+set -euxo pipefail
+
+# Debian/GCE images often run unattended-upgrades at boot; parallel apt-get exits 100 (dpkg frontend lock).
+_wait_for_dpkg_lock_optional() {
+  local max="${WORKSHOP_DPKG_LOCK_WAIT_SEC:-600}" step=5 elapsed=0
+  while [ "$elapsed" -lt "$max" ]; do
+    if ! pgrep -f '/usr/bin/unattended-upgrade' >/dev/null 2>&1 \
+      && ! pgrep -f 'apt.systemd.daily' >/dev/null 2>&1; then
+      return 0
+    fi
+    echo "Waiting for automatic apt maintenance (${elapsed}s / max ${max}s)..." >&2
+    sleep "$step"
+    elapsed=$((elapsed + step))
+  done
+  echo "WARN: timed out waiting for unattended-upgrades (${max}s); apt-get will retry on lock errors" >&2
+}
+
+_apt_get_with_retry() {
+  local max="${WORKSHOP_APT_RETRY_MAX:-36}" delay="${WORKSHOP_APT_RETRY_DELAY:-10}" n=1
+  while true; do
+    # apt-get writes progress to stdout; when this helper runs inside $(...) (e.g. TRACK_ROOT="$(_clone_workshop_from_git)"),
+    # stdout would poison the captured value — send apt output to stderr so only the intended path is captured.
+    if apt-get "$@" >&2; then
+      return 0
+    fi
+    local ec=$?
+    if [ "$n" -ge "$max" ]; then
+      echo "ERROR: apt-get failed after ${max} attempts (last exit ${ec}): apt-get $*" >&2
+      return "$ec"
+    fi
+    echo "WARN: apt-get $* failed (exit ${ec}); retry ${n}/${max} in ${delay}s" >&2
+    _wait_for_dpkg_lock_optional
+    sleep "$delay"
+    n=$((n + 1))
+  done
+}
+
+echo "Track setup on es3-api (elastic/es3-api-v2)"
+
+_n=0
+until [ -f /opt/instruqt/bootstrap/host-bootstrap-completed ]; do
+  sleep 1
+  _n=$((_n + 1))
+  if [ "$_n" -ge 600 ]; then
+    echo "ERROR: host-bootstrap-completed not found after 600s" >&2
+    exit 1
+  fi
+done
+
+# --- Phase 1: workshop tree + toolchain (symlink /root/workshop before Serverless provisioning) ---
+# So Terminal workdir /root/workshop exists while es3-api + nginx run (learners often open tabs early).
+# --- Workshop tree (CLI + assets) ---
+SCRIPT="${BASH_SOURCE[0]:-$0}"
+[[ "$SCRIPT" == /* ]] || SCRIPT="$(pwd)/$SCRIPT"
+if command -v realpath &>/dev/null; then
+  SCRIPT="$(realpath "$SCRIPT")"
+else
+  _resolved="$(readlink -f "$SCRIPT" 2>/dev/null || true)"
+  [[ -n "$_resolved" ]] && SCRIPT="$_resolved"
+fi
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT")" && pwd)"
+CANDIDATE="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Require Lab 1 Path A script + publisher so we never bind a stale pre-seeded /root/workshop
+# from an older image or bundle (same requirements.txt + assets, missing migration tooling).
+_track_root_ok() {
+  [[ -n "$1" && -f "$1/tools/requirements.txt" && -d "$1/assets/grafana" \
+    && -f "$1/scripts/install_workshop_mig_to_kbn.sh" \
+    && -f "$1/scripts/migrate_grafana_dashboards_to_serverless.sh" \
+    && -f "$1/tools/otel_gaming_fleet.py" ]]
+}
+
+# Log which required paths are missing (set -x only shows a fragment of the long [[ test).
+_track_root_diag() {
+  local r="$1"
+  echo "Workshop validation diagnostics for: ${r:-<empty>}" >&2
+  [[ -n "$r" ]] || return 1
+  [[ -d "$r" ]] || { echo "  NOT A DIRECTORY" >&2; return 1; }
+  [[ -f "$r/tools/requirements.txt" ]] || echo "  missing: tools/requirements.txt" >&2
+  [[ -d "$r/assets/grafana" ]] || echo "  missing: assets/grafana" >&2
+  [[ -f "$r/scripts/install_workshop_mig_to_kbn.sh" ]] || echo "  missing: scripts/install_workshop_mig_to_kbn.sh" >&2
+  [[ -f "$r/scripts/migrate_grafana_dashboards_to_serverless.sh" ]] || echo "  missing: scripts/migrate_grafana_dashboards_to_serverless.sh" >&2
+  [[ -f "$r/tools/otel_gaming_fleet.py" ]] || echo "  missing: tools/otel_gaming_fleet.py" >&2
+}
+_pick_root_from_requirements_file() {
+  local _req="$1" _r
+  _r="$(cd "$(dirname "$_req")/.." && pwd)"
+  if _track_root_ok "$_r"; then
+    printf '%s\n' "$_r"
+  fi
+}
+
+# Full workshop copy when the mounted track path is incomplete. Try git (several branch names), then curl tarballs.
+_clone_workshop_from_git() {
+  export DEBIAN_FRONTEND=noninteractive
+  _wait_for_dpkg_lock_optional
+  _apt_get_with_retry update -y
+  _apt_get_with_retry install -y --no-install-recommends git ca-certificates curl
+  _url="${WORKSHOP_GIT_URL:-https://github.com/poulsbopete/011y-gaming.git}"
+  _ref="${WORKSHOP_GIT_REF:-main}"
+  _ghpath="${_url#*github.com/}"
+  _ghpath="${_ghpath#*:}"
+  _ghpath="${_ghpath%.git}"
+  _owner_repo="$(printf '%s\n' "$_ghpath" | cut -d/ -f1-2)"
+  [[ "$_owner_repo" != *"/"* ]] && _owner_repo="poulsbopete/011y-gaming"
+
+  rm -rf /opt/instruqt-workshop-track /opt/_workshop_unpack
+
+  set +e
+  echo "Workshop: cloning ${_url} (try branches: ${_ref}, main, master) ..." >&2
+  _ec=1
+  for _br in "$_ref" main master; do
+    rm -rf /opt/instruqt-workshop-track
+    GIT_TERMINAL_PROMPT=0 git clone --depth 1 --branch "$_br" "$_url" /opt/instruqt-workshop-track
+    _ec=$?
+    if [[ $_ec -eq 0 ]] && _track_root_ok "/opt/instruqt-workshop-track"; then
+      echo "OK: git clone valid on branch ${_br}" >&2
+      break
+    fi
+    if [[ $_ec -eq 0 ]] && ! _track_root_ok "/opt/instruqt-workshop-track"; then
+      echo "WARN: git clone on branch ${_br} is missing Path A files; trying next branch ..." >&2
+      _track_root_diag "/opt/instruqt-workshop-track"
+    fi
+  done
+  if [[ $_ec -ne 0 ]] || ! _track_root_ok "/opt/instruqt-workshop-track"; then
+    echo "WARN: git did not yield a valid tree; trying GitHub tarballs (refs/heads/<branch>) ..." >&2
+    rm -rf /opt/instruqt-workshop-track /opt/_workshop_unpack
+    _tb_ok=1
+    _tb_urls=()
+    if [[ -n "${WORKSHOP_GIT_TARBALL_URL:-}" ]]; then
+      _tb_urls+=("${WORKSHOP_GIT_TARBALL_URL}")
+    else
+      for _br in "$_ref" main master; do
+        _tb_urls+=("https://github.com/${_owner_repo}/archive/refs/heads/${_br}.tar.gz")
+      done
+    fi
+    for _tb in "${_tb_urls[@]}"; do
+      mkdir -p /opt/_workshop_unpack
+      if curl -fsSL "$_tb" | tar -xz -C /opt/_workshop_unpack; then
+        _d="$(find /opt/_workshop_unpack -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -1)"
+        if [[ -n "$_d" ]] && _track_root_ok "$_d"; then
+          mv "$_d" /opt/instruqt-workshop-track
+          _tb_ok=0
+          echo "OK: tarball valid (${_tb})" >&2
+          rm -rf /opt/_workshop_unpack
+          break
+        fi
+        [[ -n "$_d" ]] && _track_root_diag "$_d"
+      else
+        echo "WARN: tarball failed (${_tb})" >&2
+      fi
+      rm -rf /opt/_workshop_unpack
+    done
+    if [[ $_tb_ok -ne 0 ]]; then
+      rm -rf /opt/instruqt-workshop-track
+    fi
+  fi
+  set -euxo pipefail
+
+  if _track_root_ok "/opt/instruqt-workshop-track"; then
+    (cd /opt/instruqt-workshop-track && pwd)
+  else
+    echo "ERROR: /opt/instruqt-workshop-track is not a valid workshop tree after git/tarball attempts." >&2
+    _track_root_diag "/opt/instruqt-workshop-track"
+    ls -la /opt/instruqt-workshop-track 2>/dev/null || echo "(directory missing)" >&2
+    printf ''
+  fi
+}
+
+TRACK_ROOT=""
+# Do not probe /root/workshop here: it may be a leftover directory from an old image; we set it via symlink below.
+for r in "${WORKSHOP_ROOT:-}" "${INSTRUQT_TRACK_DIR:-}" "$CANDIDATE" "$(pwd)"; do
+  if _track_root_ok "$r"; then
+    TRACK_ROOT="$(cd "$r" && pwd)"
+    break
+  fi
+done
+
+if [[ -z "$TRACK_ROOT" ]]; then
+  while IFS= read -r _req; do
+    TRACK_ROOT="$(_pick_root_from_requirements_file "$_req")"
+    [[ -n "$TRACK_ROOT" ]] && break
+  done < <(find /opt/instruqt /root /home /mnt /srv /var/lib /usr/local /opt /tmp \
+    -maxdepth 24 -type f -path '*/tools/requirements.txt' 2>/dev/null | head -64)
+fi
+
+if [[ -z "$TRACK_ROOT" ]]; then
+  while IFS= read -r _req; do
+    TRACK_ROOT="$(_pick_root_from_requirements_file "$_req")"
+    [[ -n "$TRACK_ROOT" ]] && break
+  done < <(find / -maxdepth 20 \( -path /proc -o -path /sys -o -path /dev \) -prune -o \
+    -type f -path '*/tools/requirements.txt' -print 2>/dev/null | head -32)
+fi
+
+if [[ -z "$TRACK_ROOT" ]] || ! _track_root_ok "$TRACK_ROOT"; then
+  if [[ -n "$TRACK_ROOT" ]]; then
+    echo "WARN: workshop path '$TRACK_ROOT' failed validation (missing migrate script or assets); cloning from git..." >&2
+  fi
+  TRACK_ROOT="$(_clone_workshop_from_git)"
+fi
+
+if [[ -z "$TRACK_ROOT" ]] || ! _track_root_ok "$TRACK_ROOT"; then
+  echo "ERROR: Could not resolve a valid workshop tree (need scripts/migrate_grafana_dashboards_to_serverless.sh and assets)" >&2
+  _track_root_diag "${TRACK_ROOT:-/opt/instruqt-workshop-track}"
+  exit 1
+fi
+
+export WORKSHOP_ROOT="${WORKSHOP_ROOT:-$TRACK_ROOT}"
+ln -sfn "$TRACK_ROOT" /root/workshop
+chmod +x "$TRACK_ROOT/scripts/"*.sh 2>/dev/null || true
+if [[ -f "$TRACK_ROOT/scripts/ensure_workshop_tree.sh" ]]; then
+  install -m 0755 "$TRACK_ROOT/scripts/ensure_workshop_tree.sh" /usr/local/bin/ensure-workshop-tree
+fi
+
+export DEBIAN_FRONTEND=noninteractive
+_wait_for_dpkg_lock_optional
+_apt_get_with_retry update -y
+_apt_get_with_retry install -y --no-install-recommends python3-pip python3-venv jq curl gettext-base git ca-certificates unzip
+
+python3 -m venv /opt/workshop-venv
+/opt/workshop-venv/bin/pip install --upgrade pip
+/opt/workshop-venv/bin/pip install -r "$TRACK_ROOT/tools/requirements.txt"
+
+# mig-to-kbn (elastic/observability-migration-platform): vendored in workshop git when present; otherwise
+# clone the public repo at track bootstrap. Override with WORKSHOP_MIG_TO_KBN_GIT_URL (+ _GIT_REF).
+if [ ! -f "$TRACK_ROOT/mig-to-kbn/pyproject.toml" ] && [ -x "$TRACK_ROOT/scripts/ensure_workshop_mig_to_kbn_sources.sh" ]; then
+  MIG_TO_KBN_DIR="$TRACK_ROOT/mig-to-kbn" bash "$TRACK_ROOT/scripts/ensure_workshop_mig_to_kbn_sources.sh" || {
+    echo "ERROR: could not obtain mig-to-kbn sources (submodule or public clone failed)." >&2
+    echo "       Default: https://github.com/elastic/observability-migration-platform.git" >&2
+    echo "       Override: WORKSHOP_MIG_TO_KBN_GIT_URL / WORKSHOP_MIG_TO_KBN_GIT_REF on es3-api." >&2
+    exit 1
+  }
+fi
+
+WORKSHOP_MIG_TO_KBN_READY=0
+if [ -f "$TRACK_ROOT/mig-to-kbn/pyproject.toml" ] && [ -x "$TRACK_ROOT/scripts/install_workshop_mig_to_kbn.sh" ]; then
+  echo "Installing mig-to-kbn (obs-migrate) into /opt/mig-to-kbn-venv..."
+  if MIG_TO_KBN_VENV=/opt/mig-to-kbn-venv bash "$TRACK_ROOT/scripts/install_workshop_mig_to_kbn.sh"; then
+    WORKSHOP_MIG_TO_KBN_READY=1
+  else
+    echo "WARN: install_workshop_mig_to_kbn.sh failed (uv / PyPI / network). Track will start; rerun on VM:" >&2
+    echo "      bash $TRACK_ROOT/scripts/install_workshop_mig_to_kbn.sh" >&2
+    WORKSHOP_MIG_TO_KBN_READY=0
+  fi
+else
+  echo "WARN: $TRACK_ROOT/mig-to-kbn/pyproject.toml not found — Path A migrate scripts will fail until sources are on disk." >&2
+  echo "      Fix: bash $TRACK_ROOT/scripts/ensure_workshop_mig_to_kbn_sources.sh" >&2
+  echo "      (default clone: https://github.com/elastic/observability-migration-platform.git)" >&2
+fi
+
+ALLOY_VER="${ALLOY_VERSION:-v1.8.3}"
+if [ ! -x /usr/local/bin/alloy ]; then
+  echo "Installing Grafana Alloy ${ALLOY_VER}..."
+  ADIR="/tmp/alloy-setup-unpack-$$"
+  rm -rf "$ADIR"
+  mkdir -p "$ADIR"
+  curl -fsSL "https://github.com/grafana/alloy/releases/download/${ALLOY_VER}/alloy-linux-amd64.zip" -o /tmp/alloy-linux-amd64.zip
+  unzip -o -j /tmp/alloy-linux-amd64.zip -d "$ADIR"
+  if [ -f "$ADIR/alloy" ]; then
+    install -m 0755 "$ADIR/alloy" /usr/local/bin/alloy
+  elif [ -f "$ADIR/alloy-linux-amd64" ]; then
+    install -m 0755 "$ADIR/alloy-linux-amd64" /usr/local/bin/alloy
+  else
+    echo "ERROR: Alloy zip did not contain alloy or alloy-linux-amd64" >&2
+    ls -la "$ADIR" >&2 || true
+    exit 1
+  fi
+  rm -rf "$ADIR" /tmp/alloy-linux-amd64.zip
+fi
+
+mkdir -p "$TRACK_ROOT/build/elastic-dashboards" \
+  "$TRACK_ROOT/build/elastic-alerts" "$TRACK_ROOT/build/mig-grafana"
+
+# --- Phase 2: Observability Serverless project + Kibana proxy ---
+echo "Project type: ${PROJECT_TYPE:-observability}"
+echo "Regions: ${REGIONS:-aws-us-east-1}"
+
+PRODUCT_TIER="${PRODUCT_TIER:-complete}"
+python3 bin/es3-api.py \
+  --operation create \
+  --project-type "${PROJECT_TYPE:-observability}" \
+  --product-tier "$PRODUCT_TIER" \
+  --regions "${REGIONS:-aws-us-east-1}" \
+  --project-name "${INSTRUQT_TRACK_SLUG:-migration}-$INSTRUQT_PARTICIPANT_ID-$(date '+%s')" \
+  --api-key "${PME_CLOUD_INSTRUQT_API_KEY}" \
+  --wait-for-ready
+
+timeout=120
+counter=0
+while [ $counter -lt $timeout ]; do
+  if [ -f /tmp/project_results.json ]; then
+    echo "project_results.json present"
+    break
+  fi
+  echo "Waiting for /tmp/project_results.json ($((counter + 1))/${timeout}s)"
+  sleep 1
+  counter=$((counter + 1))
+done
+
+if [ ! -f /tmp/project_results.json ]; then
+  echo "ERROR: /tmp/project_results.json not found"
+  exit 1
+fi
+
+REG="${REGIONS:-aws-us-east-1}"
+export KIBANA_URL
+KIBANA_URL="$(jq -r --arg region "$REG" '.[$region].endpoints.kibana' /tmp/project_results.json)"
+export ELASTICSEARCH_PASSWORD
+ELASTICSEARCH_PASSWORD="$(jq -r --arg region "$REG" '.[$region].credentials.password' /tmp/project_results.json)"
+export ES_URL
+ES_URL="$(jq -r --arg region "$REG" '.[$region].endpoints.elasticsearch' /tmp/project_results.json)"
+
+agent variable set ES_KIBANA_URL "$KIBANA_URL"
+agent variable set ES_URL "$ES_URL"
+agent variable set ES_USERNAME "$(jq -r --arg region "$REG" '.[$region].credentials.username' /tmp/project_results.json)"
+agent variable set ES_PASSWORD "$ELASTICSEARCH_PASSWORD"
+agent variable set ES_DEPLOYMENT_ID "$(jq -r --arg region "$REG" '.[$region].id' /tmp/project_results.json)"
+
+BASE64="$(echo -n "admin:${ELASTICSEARCH_PASSWORD}" | base64 -w0 2>/dev/null || echo -n "admin:${ELASTICSEARCH_PASSWORD}" | base64)"
+KIBANA_URL_WITHOUT_PROTOCOL="$(echo "$KIBANA_URL" | sed -e 's#http[s]\?://##g')"
+
+WORKSHOP_ES_API_KEY=""
+output="$(curl -X POST -s -u "admin:${ELASTICSEARCH_PASSWORD}" \
+  -w "\n%{http_code}" \
+  "$ES_URL/_security/api_key" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"workshop-migration"}' || true)"
+http_code="$(echo "$output" | tail -n1)"
+response_body="$(echo "$output" | sed '$d')"
+if [ "$http_code" = "200" ]; then
+  ELASTICSEARCH_API_KEY="$(echo "$response_body" | jq -r '.encoded // empty')"
+  if [ -n "$ELASTICSEARCH_API_KEY" ]; then
+    agent variable set ES_API_KEY "$ELASTICSEARCH_API_KEY"
+    agent variable set ELASTIC_API_KEY "$ELASTICSEARCH_API_KEY"
+    WORKSHOP_ES_API_KEY="$ELASTICSEARCH_API_KEY"
+  fi
+fi
+
+cat > /etc/nginx/conf.d/default.conf <<NGX
+server {
+  listen 8080 default_server;
+  server_name kibana;
+  location /nginx_status {
+    stub_status on;
+    allow 127.0.0.1;
+    deny all;
+  }
+  location / {
+    proxy_set_header Host ${KIBANA_URL_WITHOUT_PROTOCOL};
+    proxy_pass ${KIBANA_URL};
+    proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504;
+    proxy_set_header Connection "keep-alive";
+    proxy_hide_header Content-Security-Policy;
+    proxy_hide_header X-Frame-Options;
+    proxy_hide_header X-Content-Type-Options;
+    proxy_hide_header Strict-Transport-Security;
+    proxy_set_header X-Scheme \$scheme;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-Host \$host;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header Authorization "Basic ${BASE64}";
+    proxy_set_header Accept-Encoding "gzip, deflate, br";
+    proxy_set_header Accept "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+    proxy_set_header Accept-Language "en-US,en;q=0.9";
+    proxy_set_header User-Agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36";
+    proxy_redirect off;
+    proxy_http_version 1.1;
+    client_max_body_size 20M;
+    proxy_read_timeout 600;
+    proxy_buffering off;
+    proxy_send_timeout 300;
+    send_timeout 300;
+    proxy_connect_timeout 300;
+  }
+}
+NGX
+
+systemctl restart nginx
+sleep 2
+if ! systemctl is-active --quiet nginx; then
+  echo "ERROR: nginx failed to start"
+  systemctl status nginx || true
+  exit 1
+fi
+
+# Managed OTLP base URL: project_results first, then same derivation as scripts/start_workshop_otel.sh
+MOTLP_FROM_API=""
+if [ -f /tmp/project_results.json ]; then
+  MOTLP_FROM_API="$(jq -r --arg region "$REG" '.[$region].endpoints.motlp // empty' /tmp/project_results.json)"
+  if [ -z "$MOTLP_FROM_API" ] || [ "$MOTLP_FROM_API" = "null" ]; then
+    MOTLP_FROM_API="$(jq -r --arg region "$REG" '.[$region].endpoints.otlp // empty' /tmp/project_results.json)"
+  fi
+  if [ -z "$MOTLP_FROM_API" ] || [ "$MOTLP_FROM_API" = "null" ]; then
+    MOTLP_FROM_API="$(jq -r --arg region "$REG" '.[$region].endpoints.otel // empty' /tmp/project_results.json)"
+  fi
+fi
+
+DERIVED_OTLP=""
+if [[ -n "${ES_URL:-}" ]] && [[ "$ES_URL" == *".es."* ]]; then
+  DERIVED_OTLP="${ES_URL%/}"
+  DERIVED_OTLP="${DERIVED_OTLP//.es./.ingest.}"
+elif [[ -n "${KIBANA_URL:-}" ]] && [[ "$KIBANA_URL" == *".kb."* ]]; then
+  DERIVED_OTLP="${KIBANA_URL%/}"
+  DERIVED_OTLP="${DERIVED_OTLP//.kb./.ingest.}"
+fi
+
+WORKSHOP_OTLP_BASE=""
+if [ -n "$MOTLP_FROM_API" ] && [ "$MOTLP_FROM_API" != "null" ]; then
+  WORKSHOP_OTLP_BASE="$MOTLP_FROM_API"
+elif [ -n "$DERIVED_OTLP" ]; then
+  WORKSHOP_OTLP_BASE="$DERIVED_OTLP"
+fi
+
+if [ -n "$WORKSHOP_OTLP_BASE" ]; then
+  agent variable set ES_OTLP_ENDPOINT "$WORKSHOP_OTLP_BASE" || true
+fi
+
+PIPELINE_OK=0
+if [ -n "$WORKSHOP_OTLP_BASE" ] && [ -n "${WORKSHOP_ES_API_KEY:-}" ]; then
+  echo "Starting Grafana Alloy → Elastic managed OTLP (same pattern as elastic-autonomous-observability track)..."
+  export WORKSHOP_OTLP_ENDPOINT="$WORKSHOP_OTLP_BASE"
+  export WORKSHOP_OTLP_AUTH_HEADER="ApiKey ${WORKSHOP_ES_API_KEY}"
+  mkdir -p /tmp/alloy-storage
+  nohup /usr/local/bin/alloy run --storage.path=/tmp/alloy-storage "$TRACK_ROOT/assets/alloy/workshop.alloy" >>/tmp/workshop-alloy.log 2>&1 &
+  sleep 4
+  nohup /opt/workshop-venv/bin/python3 "$TRACK_ROOT/tools/otel_gaming_fleet.py" >>/tmp/workshop-fleet-supervisor.log 2>&1 &
+  PIPELINE_OK=1
+  echo "Alloy + Aether Games OTLP fleet running (alloy.log, workshop-fleet-supervisor.log)."
+elif [ -n "$WORKSHOP_OTLP_BASE" ]; then
+  echo "WARN: OTLP endpoint resolved but ES_API_KEY missing — cannot start Alloy. Create an API key, source ~/.bashrc, run ./scripts/start_workshop_otel.sh" >&2
+fi
+
+if [ "$PIPELINE_OK" != "1" ]; then
+  echo "WARN: Live telemetry uses OpenTelemetry only (Grafana Alloy → mOTLP + Python OTLP SDK emitters). Bulk JSON seed is disabled by default." >&2
+  echo "      After bootstrap: cd /root/workshop && source ~/.bashrc && ./scripts/start_workshop_otel.sh" >&2
+  if [ "${WORKSHOP_ALLOW_BULK_SEED:-0}" = "1" ]; then
+    echo "WORKSHOP_ALLOW_BULK_SEED=1 — indexing legacy bulk workshop docs (not OTLP ingest)..." >&2
+    if [ -n "${WORKSHOP_ES_API_KEY:-}" ]; then
+      ES_URL="$ES_URL" ES_API_KEY="$WORKSHOP_ES_API_KEY" /opt/workshop-venv/bin/python3 "$TRACK_ROOT/tools/seed_workshop_telemetry.py" \
+        || echo "WARN: telemetry seed failed" >&2
+    else
+      ES_URL="$ES_URL" ES_USERNAME=admin ES_PASSWORD="$ELASTICSEARCH_PASSWORD" /opt/workshop-venv/bin/python3 "$TRACK_ROOT/tools/seed_workshop_telemetry.py" \
+        || echo "WARN: telemetry seed failed" >&2
+    fi
+  fi
+fi
+
+{
+  echo "WORKSHOP_ROOT=$TRACK_ROOT"
+  if [ "$WORKSHOP_MIG_TO_KBN_READY" = "1" ]; then
+    echo "export MIG_TO_KBN_VENV=/opt/mig-to-kbn-venv"
+    echo "export PATH=/opt/mig-to-kbn-venv/bin:/root/.local/bin:\$HOME/.local/bin:/opt/workshop-venv/bin:\$PATH"
+  else
+    echo "export PATH=/opt/workshop-venv/bin:\$PATH"
+  fi
+  printf 'export KIBANA_URL=%q\n' "$KIBANA_URL"
+  printf 'export ES_URL=%q\n' "$ES_URL"
+  printf 'export ES_USERNAME=%q\n' "admin"
+  printf 'export ES_PASSWORD=%q\n' "$ELASTICSEARCH_PASSWORD"
+  if [ -n "$WORKSHOP_ES_API_KEY" ]; then
+    printf 'export ES_API_KEY=%q\n' "$WORKSHOP_ES_API_KEY"
+    echo "# Same key as Kibana → Admin and settings → API keys → workshop-migration (created by track setup)"
+  fi
+  _dep_id="$(jq -r --arg region "$REG" '.[$region].id // empty' /tmp/project_results.json)"
+  if [ -n "$_dep_id" ] && [ "$_dep_id" != "null" ]; then
+    printf 'export ES_DEPLOYMENT_ID=%q\n' "$_dep_id"
+  fi
+} >>/root/.bashrc
+
+if [ -n "$WORKSHOP_OTLP_BASE" ]; then
+  {
+    echo ""
+    echo "# Managed OTLP (mOTLP) — unique per play; from project_results and/or .es./.kb.→.ingest. (see scripts/start_workshop_otel.sh)"
+    printf 'export WORKSHOP_OTLP_ENDPOINT=%q\n' "$WORKSHOP_OTLP_BASE"
+    if [ -n "${WORKSHOP_ES_API_KEY:-}" ]; then
+      printf 'export WORKSHOP_OTLP_AUTH_HEADER=%q\n' "ApiKey ${WORKSHOP_ES_API_KEY}"
+    fi
+    echo "# Restart Alloy + emitters: ./scripts/start_workshop_otel.sh"
+  } >>/root/.bashrc
+fi
+
+find "$TRACK_ROOT" -type f \( -name 'setup-es3-api' -o -name 'check-es3-api' -o -name 'solve-es3-api' -o -name 'cleanup-es3-api' \) -exec chmod +x {} \;
+[[ -f "$TRACK_ROOT/scripts/install_workshop_mig_to_kbn.sh" ]] && chmod +x "$TRACK_ROOT/scripts/install_workshop_mig_to_kbn.sh"
+[[ -f "$TRACK_ROOT/scripts/migrate_grafana_dashboards_to_serverless.sh" ]] && chmod +x "$TRACK_ROOT/scripts/migrate_grafana_dashboards_to_serverless.sh"
+[[ -f "$TRACK_ROOT/scripts/start_workshop_otel.sh" ]] && chmod +x "$TRACK_ROOT/scripts/start_workshop_otel.sh"
+[[ -f "$TRACK_ROOT/scripts/check_workshop_otel_pipeline.sh" ]] && chmod +x "$TRACK_ROOT/scripts/check_workshop_otel_pipeline.sh"
+[[ -f "$TRACK_ROOT/scripts/sync_workshop_from_git.sh" ]] && chmod +x "$TRACK_ROOT/scripts/sync_workshop_from_git.sh"
+[[ -f "$TRACK_ROOT/scripts/ensure_workshop_tree.sh" ]] && chmod +x "$TRACK_ROOT/scripts/ensure_workshop_tree.sh"
+[[ -f "$TRACK_ROOT/scripts/update_mig_to_kbn.sh" ]] && chmod +x "$TRACK_ROOT/scripts/update_mig_to_kbn.sh"
+[[ -f "$TRACK_ROOT/scripts/push_git_and_instruqt.sh" ]] && chmod +x "$TRACK_ROOT/scripts/push_git_and_instruqt.sh"
+[[ -f "$TRACK_ROOT/scripts/demo_a2a_security_stub.sh" ]] && chmod +x "$TRACK_ROOT/scripts/demo_a2a_security_stub.sh"
+[[ -f "$TRACK_ROOT/scripts/ensure_ai_recommendation_panels.py" ]] && chmod +x "$TRACK_ROOT/scripts/ensure_ai_recommendation_panels.py"
+[[ -f "$TRACK_ROOT/scripts/deploy_workshop_workflows.py" ]] && chmod +x "$TRACK_ROOT/scripts/deploy_workshop_workflows.py"
+
+# ---------------------------------------------------------------------------
+# Agent Builder / Workflows prep (metrics-adoption AI notes on dashboards)
+# Full seed runs after Lab migrate scripts; here we only create the ES index + enable UI.
+# ---------------------------------------------------------------------------
+if [ -n "${ES_URL:-}" ] && { [ -n "${WORKSHOP_ES_API_KEY:-}" ] || [ -n "${ELASTICSEARCH_PASSWORD:-}" ]; }; then
+  echo "Ensuring Elasticsearch index metrics-adoption-recommendations exists..."
+  if [ -n "${WORKSHOP_ES_API_KEY:-}" ]; then
+    _rec_ix=$(curl -sS -o /tmp/rec-index-body.json -w "%{http_code}" -X PUT "${ES_URL}/metrics-adoption-recommendations" \
+      -H "Authorization: ApiKey ${WORKSHOP_ES_API_KEY}" \
+      -H "Content-Type: application/json" \
+      -d '{"mappings":{"properties":{"@timestamp":{"type":"date"},"execution_id":{"type":"keyword"},"workflow_name":{"type":"keyword"},"source":{"type":"keyword"},"dashboard_platform":{"type":"keyword"},"recommendation":{"type":"text"}}}}')
+  else
+    _rec_ix=$(curl -sS -o /tmp/rec-index-body.json -w "%{http_code}" -X PUT "${ES_URL}/metrics-adoption-recommendations" \
+      -u "admin:${ELASTICSEARCH_PASSWORD}" \
+      -H "Content-Type: application/json" \
+      -d '{"mappings":{"properties":{"@timestamp":{"type":"date"},"execution_id":{"type":"keyword"},"workflow_name":{"type":"keyword"},"source":{"type":"keyword"},"dashboard_platform":{"type":"keyword"},"recommendation":{"type":"text"}}}}')
+  fi
+  echo "DEBUG: PUT metrics-adoption-recommendations HTTP ${_rec_ix}"
+fi
+
+if [ -n "${KIBANA_URL:-}" ] && [ -n "${WORKSHOP_ES_API_KEY:-}" ]; then
+  echo "Enabling workflows:ui:enabled + deploying Metrics adoption AI workflow..."
+  export KIBANA_URL ES_API_KEY="$WORKSHOP_ES_API_KEY" ES_URL
+  # Give Kibana a moment after project create before Workflows / Agent Builder APIs accept writes.
+  sleep 15
+  set +e
+  /opt/workshop-venv/bin/python3 "$TRACK_ROOT/scripts/deploy_workshop_workflows.py" \
+    metrics-adoption-recommendations.yaml \
+    | tee /tmp/workshop-workflow-deploy.log
+  /opt/workshop-venv/bin/python3 "$TRACK_ROOT/scripts/ensure_ai_recommendation_panels.py" --skip-attach \
+    | tee -a /tmp/workshop-workflow-deploy.log
+  set -e
+  echo "DEBUG: workflow deploy log → /tmp/workshop-workflow-deploy.log"
+  echo "    To seed Agent Builder text now (or after migrate):"
+  echo "      source ~/.bashrc && python3 /root/workshop/scripts/ensure_ai_recommendation_panels.py --seed-now"
+  echo "    To re-deploy / list workflows:"
+  echo "      python3 /root/workshop/scripts/deploy_workshop_workflows.py"
+fi
+
+echo "Track bootstrap complete."

@@ -1,0 +1,44 @@
+slug: aether-games-metrics-adoption
+id: aethergamesmetrics01
+title: Aether Games — metrics adoption on Elastic
+teaser: Migrate PromQL/Grafana gaming platform metrics onto Observability Serverless
+  and preview A2A federation to Security.
+description: |
+  Aether Games workshop. Live OTLP → mOTLP, Kibana on :8080. Lab 1 migrates
+  gaming-themed Grafana/PromQL dashboards via grafana-migrate. Lab 2 publishes
+  alert drafts and stubs A2A calls to Elastic Security (one Serverless project
+  per play). Engine: elastic/observability-migration-platform.
+icon: https://cdn.instruqt.com/assets/templates/kubernetes.png
+tags:
+- obs-migrate
+- gaming
+- aether-games
+- elastic
+- observability-migration-platform
+- metrics-adoption
+- opentelemetry
+- serverless
+- migration
+- observability
+owner: elastic
+developers:
+- peter.simkins@elastic.co
+instructors:
+- peter.simkins@elastic.co
+show_timer: true
+skipping_enabled: true
+idle_timeout: 3600
+timelimit: 10800
+lab_config:
+  extend_ttl: 3600
+  sidebar_enabled: true
+  feedback_recap_enabled: false
+  feedback_tab_enabled: false
+  loadingMessages: true
+  theme:
+    name: modern-dark
+  override_challenge_layout: false
+  hideStopButton: false
+  default_layout: AssignmentRight
+  default_layout_sidebar_size: 35
+enhanced_loading: false

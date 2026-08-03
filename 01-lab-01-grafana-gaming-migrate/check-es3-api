@@ -1,0 +1,23 @@
+#!/bin/bash
+set -euo pipefail
+cd /root/workshop
+
+mig_yaml_old="$(find build/mig-grafana/yaml -maxdepth 1 -type f -name '*.yaml' 2>/dev/null | wc -l | tr -d ' ')" || mig_yaml_old=0
+mig_yaml_new="$(find build/mig-grafana/dashboards/yaml -maxdepth 1 -type f -name '*.yaml' 2>/dev/null | wc -l | tr -d ' ')" || mig_yaml_new=0
+if [ "${mig_yaml_new:-0}" -gt "${mig_yaml_old:-0}" ]; then
+  mig_yaml="${mig_yaml_new}"
+  mig_report="build/mig-grafana/dashboards/migration_report.json"
+else
+  mig_yaml="${mig_yaml_old}"
+  mig_report="build/mig-grafana/migration_report.json"
+  [ ! -f "$mig_report" ] && [ -f "build/mig-grafana/dashboards/migration_report.json" ] && mig_report="build/mig-grafana/dashboards/migration_report.json"
+fi
+
+EXPECTED="${WORKSHOP_EXPECTED_GRAFANA_YAML:-14}"
+
+if [ -f "$mig_report" ] && [ "${mig_yaml:-0}" -ge "$EXPECTED" ]; then
+  echo "Lab 1 checks passed (mig-to-kbn: ${mig_yaml} YAML)."
+  exit 0
+fi
+
+fail-message "Expected ${EXPECTED}+ *.yaml under build/mig-grafana (found ${mig_yaml:-0}). Run: bash /root/workshop/scripts/migrate_grafana_dashboards_to_serverless.sh"

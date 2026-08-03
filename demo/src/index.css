@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Syne", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-arena: #070b12;
+  --color-arena-elevated: #0e1520;
+  --color-cyan: #22d3ee;
+  --color-amber: #fbbf24;
+  --color-mist: #94a3b8;
+  --color-fog: #e2e8f0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background: var(--color-arena);
+  color: var(--color-fog);
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+@keyframes drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.45; }
+  50% { transform: translate3d(2%, -3%, 0) scale(1.05); opacity: 0.7; }
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-line {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.9; }
+}
+
+.hero-glow {
+  animation: drift 14s ease-in-out infinite;
+}
+
+.rise-in {
+  animation: rise-in 0.8s ease-out both;
+}
+
+.rise-in-delay {
+  animation: rise-in 0.9s ease-out 0.15s both;
+}
+
+.pulse-line {
+  animation: pulse-line 3.2s ease-in-out infinite;
+}
