@@ -1,3 +1,31 @@
 #!/bin/bash
+# Lab 2 host setup: refresh alert publisher + Lab 2 script from GitHub (stale track mounts).
 set -euxo pipefail
-chmod +x /root/workshop/scripts/*.sh 2>/dev/null || true
+
+WORKSHOP="${WORKSHOP_ROOT:-/root/workshop}"
+URL="${WORKSHOP_GIT_URL:-https://github.com/poulsbopete/011y-gaming.git}"
+REF="${WORKSHOP_GIT_REF:-main}"
+_ghpath="${URL#*github.com/}"
+_ghpath="${_ghpath#*:}"
+_ghpath="${_ghpath%.git}"
+_owner_repo="$(printf '%s\n' "$_ghpath" | cut -d/ -f1-2)"
+[[ "$_owner_repo" != *"/"* ]] && _owner_repo="poulsbopete/011y-gaming"
+
+BASE="https://raw.githubusercontent.com/${_owner_repo}/${REF}"
+mkdir -p "${WORKSHOP}/scripts" "${WORKSHOP}/tools"
+
+_refresh() {
+  local rel="$1"
+  if curl -fsSL "${BASE}/${rel}" -o "${WORKSHOP}/${rel}"; then
+    echo "OK: refreshed ${rel} from ${_owner_repo}@${REF}"
+  else
+    echo "WARN: could not refresh ${rel} from GitHub; using track copy" >&2
+  fi
+}
+
+_refresh "tools/publish_grafana_alert_drafts_kibana.py"
+_refresh "scripts/publish_alerts_and_a2a_stub.sh"
+_refresh "scripts/demo_a2a_security_stub.sh"
+
+chmod +x "${WORKSHOP}/scripts/"*.sh 2>/dev/null || true
+chmod +x "${WORKSHOP}/tools/"*.py 2>/dev/null || true

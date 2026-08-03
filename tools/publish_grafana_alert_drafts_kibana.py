@@ -134,9 +134,10 @@ def _automated_alert_count(report: dict[str, Any]) -> int:
 
 
 def _put_body(body: dict[str, Any]) -> dict[str, Any]:
-    """Kibana rule PUT rejects bodies that include read-only fields like ``rule_type_id``."""
+    """Kibana rule PUT rejects create-only / read-only fields (rule_type_id, consumer)."""
     b = dict(body)
-    b.pop("rule_type_id", None)
+    for key in ("rule_type_id", "consumer", "id", "created_by", "updated_by", "created_at", "updated_at"):
+        b.pop(key, None)
     return b
 
 
