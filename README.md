@@ -62,6 +62,8 @@ instruqt track push
 
 ## Vercel demo (`demo/`)
 
+**Live:** https://aether-games-demo.vercel.app
+
 ```bash
 cd demo
 cp .env.example .env
