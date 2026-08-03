@@ -15,7 +15,9 @@ cat >"${STUB_JSON}" <<'EOF'
 {
   "stub": true,
   "reason": "Instruqt stands up one Observability Serverless project per play; Security is not provisioned here.",
-  "production_pattern": "A2A agent federation: Obs agent → Security agent endpoint (scoped API key)",
+  "production_pattern_elastic": "CCS between Observability Serverless and Security Serverless",
+  "production_pattern_non_elastic": "A2A agent federation to non-Elastic solutions (scoped agent endpoints)",
+  "lab_stub_shape": "A2A-shaped payload for teaching federation without a second Serverless project",
   "security_project_demo": "https://my-security-project-ac9463.kb.us-central1.gcp.elastic.cloud",
   "correlation": {
     "trigger": "auth_login_failure_spike + anticheat_high_severity",
@@ -39,32 +41,45 @@ cat >"${STUB_JSON}" <<'EOF'
     ]
   },
   "next_steps_production": [
-    "Register Security project agent in Agent Builder",
-    "Workflow step: ai.agent → security-fraud-correlator",
+    "Configure CCS between Observability and Security Serverless projects",
+    "Use A2A when federating to non-Elastic agents (Grafana, Datadog, studio tooling)",
     "Open Elastic Security case with Obs deep-link annotations"
   ]
 }
 EOF
 
 cat >"${STUB_MD}" <<'EOF'
-# A2A federation preview (stubbed)
+# Federation preview (stubbed)
 
-**Aether Games** production architecture correlates Observability metrics with Elastic Security
-for account fraud (credential stuffing, multi-account abuse, payment fraud).
+**Aether Games** keeps Observability and Security as separate Serverless projects.
 
-This Instruqt sandbox provisions **Observability Serverless only**. The A2A call to Security is
-**stubbed** — see `build/a2a-stub/security-fraud-correlation.json` for the canned response.
+| Boundary | Production pattern |
+| --- | --- |
+| Elastic Serverless ↔ Elastic Serverless | **CCS** |
+| Elastic ↔ non-Elastic (Grafana, Datadog, custom SIEM) | **A2A** (scoped agent endpoints) |
 
-## Production flow
+This Instruqt sandbox provisions **Observability Serverless only**. Lab 2 writes an
+**A2A-shaped stub** — see `build/a2a-stub/security-fraud-correlation.json`.
+
+## Production Elastic flow (CCS)
 
 ```
-Obs Agent (metrics / auth failures)
-        │  A2A
+Obs Serverless (metrics / auth failures)
+        │  CCS
         ▼
-Security Agent (alerts / entity analytics / cases)
+Security Serverless (alerts / entity analytics / cases)
         │
         ▼
 Case + response playbook
+```
+
+## Non-Elastic flow (A2A)
+
+```
+Elastic agent / workflow
+        │  A2A
+        ▼
+External agent (Grafana, Datadog, studio tooling)
 ```
 
 Open the live Security project from the **Aether Games Vercel demo** (not from this sandbox).

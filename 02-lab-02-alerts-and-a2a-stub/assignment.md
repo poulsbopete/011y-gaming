@@ -17,23 +17,29 @@ notes:
     <div style="border:1px solid #854d0e;border-radius:12px;padding:14px;background:#1c1917;margin:16px 0;">
     <div style="font-weight:700;color:#fbbf24;">One Serverless project per play</div>
     <div style="font-size:0.9rem;color:#e7e5e4;margin-top:8px;">
-    Instruqt provisions <b>Observability</b> only. A2A calls to Elastic Security are
-    <b>stubbed</b> here. Open the live Security project from the <b>Aether Games Vercel demo</b>.
+    Instruqt provisions <b>Observability</b> only. Live Elastic↔Elastic correlation uses
+    <b>CCS</b>; <b>A2A</b> is for non-Elastic systems. Lab 2 writes an A2A-shaped stub.
+    Open the live Security project from the <b>Aether Games Vercel demo</b>.
     </div>
     </div>
 - type: text
   contents: |
-    ## Why stub A2A?
+    ## Why stub federation?
 
     ```
     Obs Serverless (this lab)          Security Serverless (demo only)
             │                                    │
-            │   A2A agent call                   │
+            │   production: CCS                  │
+            │   this lab: A2A-shaped stub        │
             └──────────► (stubbed JSON) ─ ─ ─ ─ ►│ fraud cases / entity analytics
     ```
 
-    Production Aether Games correlates auth failures + anti-cheat O11Y signals with
-    Security alerts (credential stuffing, multi-account abuse, payment fraud).
+    Production Aether Games:
+    - **CCS** between Elastic Observability and Security Serverless projects
+    - **A2A** when correlating with non-Elastic solutions (Grafana, Datadog, custom SIEM)
+
+    Auth failures + anti-cheat O11Y signals join Security alerts (credential stuffing,
+    multi-account abuse, payment fraud).
 tabs:
 - id: tod44opksqxs
   title: Terminal

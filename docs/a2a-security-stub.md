@@ -9,7 +9,14 @@ Production **Aether Games** architecture still separates concerns:
 - **Observability** — platform metrics, auth failure rates, anti-cheat signal volume
 - **Security** — credential stuffing, multi-account abuse, payment fraud cases
 
-Correlation uses **Agent-to-Agent (A2A)** federation (scoped agent endpoints / workflows), not CCS between the two Serverless projects.
+**How correlation works in production:**
+
+| Boundary | Pattern |
+| --- | --- |
+| Elastic Serverless ↔ Elastic Serverless (O11Y ↔ Security) | **CCS** (cross-cluster search) |
+| Elastic ↔ non-Elastic (Grafana, Datadog, custom SIEM, studio backends) | **A2A** (scoped agent endpoints / workflows) |
+
+Lab 2 still writes an **A2A-shaped stub** so learners see a federation payload without a second Serverless project in Instruqt. The Vercel A2A page shows the live projects and the CCS vs A2A split.
 
 ## What Lab 2 does
 

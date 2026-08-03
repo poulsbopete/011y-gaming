@@ -14,8 +14,8 @@ Dual deliverable for gaming platform POV conversations:
 ## Value narrative
 
 - Consolidate Prometheus/Grafana dashboards, alerts, and Prom metrics into Elastic at a better price point
-- Account / platform fraud lives in Elastic Security; correlated via **A2A** when both projects exist
-- Instruqt stands up **one** Observability Serverless project per play → Security A2A is **stubbed** in Lab 2
+- Account / platform fraud lives in Elastic Security; **CCS** correlates Elastic Serverless projects; **A2A** federates non-Elastic solutions
+- Instruqt stands up **one** Observability Serverless project per play → Security federation is **stubbed** (A2A-shaped) in Lab 2
 
 ## Fixed demo endpoints
 
