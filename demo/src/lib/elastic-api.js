@@ -2,6 +2,9 @@ const O11Y_DEFAULT = 'https://otel-demo-a5630c.kb.us-east-1.aws.elastic.cloud';
 const SECURITY_DEFAULT = 'https://my-security-project-ac9463.kb.us-central1.gcp.elastic.cloud';
 const TIME = { from: 'now-24h', to: 'now' };
 
+// Keep Discover deep links on mapped columns only. ES|QL verification fails on
+// unmapped names (e.g. aether_*), even inside OR — and the shared demo project
+// may not have the Instruqt fleet series. Workshop boards use PromQL on metric names.
 export const AETHER_DISCOVER_ESQL = [
   'FROM metrics-*',
   '| WHERE service.name IS NOT NULL',
@@ -12,7 +15,7 @@ export const AETHER_DISCOVER_ESQL = [
 
 export const AETHER_MATCHMAKING_ESQL = [
   'FROM metrics-*',
-  '| WHERE service.name == "matchmaking" OR aether_matchmaking_queue_depth IS NOT NULL',
+  '| WHERE service.name IS NOT NULL',
   '| STATS samples = COUNT(*) BY service.name',
   '| SORT samples DESC',
   '| LIMIT 10',
@@ -20,7 +23,7 @@ export const AETHER_MATCHMAKING_ESQL = [
 
 export const AETHER_AUTH_ESQL = [
   'FROM metrics-*',
-  '| WHERE service.name == "auth" OR aether_auth_logins_total IS NOT NULL',
+  '| WHERE service.name IS NOT NULL',
   '| STATS samples = COUNT(*) BY service.name',
   '| SORT samples DESC',
   '| LIMIT 10',

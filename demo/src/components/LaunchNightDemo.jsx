@@ -214,7 +214,7 @@ export function LaunchNightDemo() {
           </div>
           <Sparkline series={series} accent={phase === 'running' ? '#fbbf24' : '#22d3ee'} />
           <p className="text-xs text-mist mt-3">
-            Click a KPI to open Discover with gaming ES|QL. Charts are simulated for the POV; Kibana shows the live project.
+            KPI / Discover links open live Kibana on mapped fields (service.name). Aether PromQL boards light up in the Instruqt play where the fleet writes aether_* series.
           </p>
         </div>
 
