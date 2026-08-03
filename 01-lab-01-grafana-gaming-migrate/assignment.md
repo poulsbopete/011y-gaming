@@ -1,6 +1,6 @@
 ---
 slug: lab-01-grafana-gaming-migrate
-id: aetherlab01grafana
+id: dnebz79khnwm
 type: challenge
 title: Lab 1 — Migrate Aether Games PromQL boards
 teaser: One command brings 14 gaming Grafana/PromQL dashboards onto Kibana.
@@ -69,12 +69,12 @@ notes:
     <iframe src="https://poulsbopete.github.io/Vampire-Clone/" title="O11Y Survivors" width="100%" height="100%" style="border:0;border-radius:10px;background:#0a0a0a;display:block;" allow="fullscreen" loading="lazy"></iframe>
     </div>
 tabs:
-- id: aetherlab01term
+- id: gx0yxhbyb7i0
   title: Terminal
   type: terminal
   hostname: es3-api
   workdir: /root
-- id: aetherlab01kbn
+- id: mkky91gxqq8y
   title: Elastic Serverless
   type: service
   hostname: es3-api

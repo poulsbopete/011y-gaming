@@ -26,6 +26,9 @@ Dual deliverable for gaming platform POV conversations:
 
 ## Instruqt track
 
+**Manage:** https://play.instruqt.com/manage/elastic/tracks/aether-games-metrics-adoption
+
+
 ### Labs
 
 1. **Lab 1** — migrate **14** gaming Grafana boards:  

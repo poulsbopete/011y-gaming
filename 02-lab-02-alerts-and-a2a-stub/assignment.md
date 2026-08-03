@@ -1,6 +1,6 @@
 ---
 slug: lab-02-alerts-and-a2a-stub
-id: aetherlab02alertsa2a
+id: xlfj91lntriu
 type: challenge
 title: Lab 2 — Alert drafts + A2A Security stub
 teaser: Publish disabled gaming alert rules and preview A2A fraud federation (stubbed).
@@ -35,12 +35,12 @@ notes:
     Production Aether Games correlates auth failures + anti-cheat O11Y signals with
     Security alerts (credential stuffing, multi-account abuse, payment fraud).
 tabs:
-- id: aetherlab02term
+- id: tod44opksqxs
   title: Terminal
   type: terminal
   hostname: es3-api
   workdir: /root
-- id: aetherlab02kbn
+- id: mcyva3weyflb
   title: Elastic Serverless
   type: service
   hostname: es3-api

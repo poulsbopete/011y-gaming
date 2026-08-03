@@ -1,5 +1,5 @@
 slug: aether-games-metrics-adoption
-id: aethergamesmetrics01
+id: tgsydt7gynld
 title: Aether Games — metrics adoption on Elastic
 teaser: Migrate PromQL/Grafana gaming platform metrics onto Observability Serverless
   and preview A2A federation to Security.
@@ -11,13 +11,13 @@ description: |
 icon: https://cdn.instruqt.com/assets/templates/kubernetes.png
 tags:
 - obs-migrate
-- gaming
-- aether-games
 - elastic
 - observability-migration-platform
+- aether-games
 - metrics-adoption
 - opentelemetry
 - serverless
+- gaming
 - migration
 - observability
 owner: elastic
@@ -41,4 +41,5 @@ lab_config:
   hideStopButton: false
   default_layout: AssignmentRight
   default_layout_sidebar_size: 35
+checksum: "16080524214951040772"
 enhanced_loading: false
