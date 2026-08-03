@@ -49,6 +49,8 @@ export function FraudLab() {
   const [selected, setSelected] = useState(SEED_ALERTS[0]);
   const [caseNote, setCaseNote] = useState(null);
   const [isolated, setIsolated] = useState(null);
+  const [seedMsg, setSeedMsg] = useState(null);
+  const [seeding, setSeeding] = useState(false);
 
   const refresh = useCallback(() => {
     setAlerts((prev) =>
@@ -79,12 +81,30 @@ export function FraudLab() {
     setIsolated(selected.entity);
   }
 
+  async function seedLiveFraud() {
+    setSeeding(true);
+    setSeedMsg(null);
+    try {
+      const r = await fetch('/api/seed-fraud', { method: 'POST' });
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setSeedMsg(body.error || `Seed failed (${r.status})`);
+        return;
+      }
+      setSeedMsg(body.message || 'Seeded fraud alerts.');
+    } catch (e) {
+      setSeedMsg(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSeeding(false);
+    }
+  }
+
   return (
     <div>
       <ModuleHeader
         eyebrow="Account fraud"
         title="Investigate gaming fraud signals"
-        subtitle="Click an alert, open a case, or isolate an entity — then jump into the live Security Serverless project for the real SIEM surface."
+        subtitle="Simulate UI triage here, then seed live alerts into Security Serverless. Attack Discovery needs those alerts plus an LLM connector and Run."
       >
         <DeepLinkBar
           links={[
@@ -94,7 +114,24 @@ export function FraudLab() {
             { href: kibanaSecurityUrl('attackDiscovery'), label: 'Attack discovery' },
           ]}
         />
+        <PrimaryCta onClick={seedLiveFraud} disabled={seeding}>
+          {seeding ? 'Seeding…' : 'Seed live Security alerts'}
+        </PrimaryCta>
       </ModuleHeader>
+
+      {seedMsg && (
+        <p className="mb-6 text-sm text-amber border border-amber/30 rounded-md px-4 py-3">
+          {seedMsg}{' '}
+          <a
+            href={kibanaSecurityUrl('alerts')}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-cyan hover:text-amber"
+          >
+            Open Alerts →
+          </a>
+        </p>
+      )}
 
       <div className="grid lg:grid-cols-5 gap-4">
         <div className="lg:col-span-3 rounded-xl border border-white/10 bg-arena-elevated/80 overflow-hidden">
