@@ -90,6 +90,17 @@ Env vars: `VITE_KIBANA_URL`, `VITE_ES_URL`, `VITE_SECURITY_KIBANA_URL`, `VITE_SE
 - [`docs/invite.md`](docs/invite.md)
 - [`docs/a2a-security-stub.md`](docs/a2a-security-stub.md)
 
+## Agent Builder workflows
+
+Deployed by `scripts/deploy_workshop_workflows.py` (Lab 1 migrate + Lab 2 publish):
+
+| Workflow | Purpose |
+| --- | --- |
+| `workflows/metrics-adoption-recommendations.yaml` | AI notes for Grafana/Datadog metrics adoption |
+| `workflows/aether-dashboard-briefs.yaml` | Per-Aether-dashboard summary + remediation steps |
+
+In Kibana: **Management → Workflows → Aether — dashboard briefs (Agent Builder) → Run**. Output lands in index `aether-dashboard-briefs` and Markdown **workshop-aether-dashboard-briefs**.
+
 ## Layout
 
 ```
@@ -101,7 +112,7 @@ assets/grafana/          # 14 PromQL boards + alerts
 assets/alloy/
 scripts/                 # migrate, OTLP, A2A stub
 tools/otel_gaming_fleet.py
-workflows/
+workflows/               # Agent Builder YAML (dashboard briefs + AI notes)
 demo/                    # Vite + React
 docs/
 ```
