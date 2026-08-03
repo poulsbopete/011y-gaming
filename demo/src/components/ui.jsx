@@ -49,25 +49,23 @@ export function GhostCta({ href, children, external = true, onClick, disabled })
   );
 }
 
-/** Stacked module intro — title full-width, actions below (avoids squeezed subtitle columns). */
+/** Stacked module intro — title full-width, actions + deep links below (no transform clip). */
 export function ModuleHeader({ eyebrow, title, subtitle, actions, children }) {
   return (
-    <header className="mb-8 md:mb-10 rise-in">
-      {eyebrow && (
-        <p className="text-[11px] uppercase tracking-[0.22em] text-amber mb-3 font-medium">{eyebrow}</p>
-      )}
-      <h1 className="font-display text-3xl md:text-[2.75rem] font-bold text-fog tracking-tight leading-[1.1] max-w-3xl">
-        {title}
-      </h1>
-      {subtitle && (
-        <p className="text-mist mt-4 max-w-2xl text-[15px] md:text-base leading-relaxed">{subtitle}</p>
-      )}
-      {(actions || children) && (
-        <div className="mt-6 flex flex-col gap-4">
-          {actions}
-          {children}
-        </div>
-      )}
+    <header className="mb-8 md:mb-10 overflow-visible">
+      <div className="rise-in">
+        {eyebrow && (
+          <p className="text-[11px] uppercase tracking-[0.22em] text-amber mb-3 font-medium">{eyebrow}</p>
+        )}
+        <h1 className="font-display text-3xl md:text-[2.75rem] font-bold text-fog tracking-tight leading-[1.15] max-w-3xl pb-1">
+          {title}
+        </h1>
+        {subtitle && (
+          <p className="text-mist mt-4 max-w-2xl text-[15px] md:text-base leading-relaxed">{subtitle}</p>
+        )}
+        {actions && <div className="mt-6">{actions}</div>}
+      </div>
+      {children && <div className="mt-5 overflow-visible">{children}</div>}
     </header>
   );
 }
@@ -107,21 +105,23 @@ export function DeepLinkBar({ links, label = 'Open in Elastic' }) {
   const items = links.filter((l) => l.href);
   if (!items.length) return null;
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:gap-4">
-      <span className="text-[10px] uppercase tracking-[0.16em] text-mist shrink-0">{label}</span>
-      <div className="flex flex-wrap gap-x-4 gap-y-2">
+    <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-4 overflow-visible py-1">
+      <span className="text-[10px] uppercase tracking-[0.16em] text-mist shrink-0 leading-none pt-0.5">
+        {label}
+      </span>
+      <div className="flex flex-wrap gap-x-4 gap-y-2.5 overflow-visible">
         {items.map((l) => (
           <a
             key={l.label}
             href={l.href}
             target="_blank"
             rel="noopener noreferrer"
-            className={`inline-flex items-center gap-1 text-sm transition-colors ${
+            className={`inline-flex items-center gap-1.5 text-sm leading-normal transition-colors ${
               l.primary ? 'text-cyan hover:text-amber font-medium' : 'text-mist hover:text-fog'
             }`}
           >
             {l.label}
-            <ExternalLink className="w-3 h-3 opacity-60" />
+            <ExternalLink className="w-3 h-3 shrink-0 opacity-60" />
           </a>
         ))}
       </div>
