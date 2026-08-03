@@ -1,3 +1,22 @@
 #!/bin/bash
+# Lab 1 host setup: refresh migrate script from GitHub so CLI flag renames land mid-play.
 set -euxo pipefail
-chmod +x /root/workshop/scripts/*.sh 2>/dev/null || true
+
+WORKSHOP="${WORKSHOP_ROOT:-/root/workshop}"
+URL="${WORKSHOP_GIT_URL:-https://github.com/poulsbopete/011y-gaming.git}"
+REF="${WORKSHOP_GIT_REF:-main}"
+_ghpath="${URL#*github.com/}"
+_ghpath="${_ghpath#*:}"
+_ghpath="${_ghpath%.git}"
+_owner_repo="$(printf '%s\n' "$_ghpath" | cut -d/ -f1-2)"
+[[ "$_owner_repo" != *"/"* ]] && _owner_repo="poulsbopete/011y-gaming"
+
+mkdir -p "${WORKSHOP}/scripts"
+if curl -fsSL "https://raw.githubusercontent.com/${_owner_repo}/${REF}/scripts/migrate_grafana_dashboards_to_serverless.sh" \
+  -o "${WORKSHOP}/scripts/migrate_grafana_dashboards_to_serverless.sh"; then
+  echo "OK: refreshed migrate_grafana_dashboards_to_serverless.sh from ${_owner_repo}@${REF}"
+else
+  echo "WARN: could not refresh migrate script from GitHub; using track copy" >&2
+fi
+
+chmod +x "${WORKSHOP}/scripts/"*.sh 2>/dev/null || true
