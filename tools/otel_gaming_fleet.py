@@ -45,6 +45,15 @@ SERVICES = (
 REGIONS = ("us-west", "us-east", "eu-west", "apac")
 STATUSES = ("200", "200", "200", "200", "200", "201", "400", "401", "500", "503")
 
+
+def _region_attrs(region: str, **extra: str) -> dict[str, str]:
+    """Emit both ``region`` and ECS ``cloud.region`` — grafana-migrate maps PromQL
+    ``by (region)`` to ``cloud.region``, while raw OTel attributes often stay as ``region``.
+    """
+    attrs = {"region": region, "cloud.region": region}
+    attrs.update(extra)
+    return attrs
+
 _stop = False
 
 
