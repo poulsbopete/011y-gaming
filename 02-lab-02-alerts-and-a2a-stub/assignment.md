@@ -63,6 +63,9 @@ enhanced_loading: null
 **Lab goal:** publish alert drafts and run the A2A Security stub.
 
 ```bash
+# Optional if publisher fails on stale track: refresh from GitHub, then run Lab 2.
+curl -fsSL https://raw.githubusercontent.com/poulsbopete/011y-gaming/main/tools/publish_grafana_alert_drafts_kibana.py \
+  -o /root/workshop/tools/publish_grafana_alert_drafts_kibana.py
 bash /root/workshop/scripts/publish_alerts_and_a2a_stub.sh
 ```
 
