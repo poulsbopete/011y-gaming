@@ -2,7 +2,7 @@
 
 Vite + React front door for gaming POV demos.
 
-**Live:** https://aether-games-demo.vercel.app
+**Live:** https://011y-gaming.vercel.app
 
 ```bash
 cp .env.example .env
@@ -12,10 +12,8 @@ npm run dev
 
 Deep links default to `otel-demo-a5630c` (O11Y) and `my-security-project-ac9463` (Security).
 
-Deploy from this directory:
+The Git-connected Vercel project uses **Root Directory** `demo/`. Deploy from the **repo root**:
 
 ```bash
 vercel --prod --scope poulsbopetes-projects
 ```
-
-Or connect the GitHub repo with **Root Directory** set to `demo/`.

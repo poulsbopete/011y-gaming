@@ -2,6 +2,8 @@ node_modules/
 dist/
 demo/dist/
 demo/node_modules/
+.vercel/
+demo/.vercel/
 .DS_Store
 .env
 .env.local
@@ -17,5 +19,5 @@ build/a2a-stub/
 __pycache__/
 .venv/
 .workshop-mig-venv/
-.vercel/
 *.log
+.vercel

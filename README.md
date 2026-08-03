@@ -62,7 +62,9 @@ instruqt track push
 
 ## Vercel demo (`demo/`)
 
-**Live:** https://aether-games-demo.vercel.app
+**Live:** https://011y-gaming.vercel.app
+
+Git project **Root Directory** is `demo/`. Local:
 
 ```bash
 cd demo
@@ -71,7 +73,13 @@ npm install
 npm run dev
 ```
 
-Deploy: set root directory to `demo/` on Vercel (or `vercel --cwd demo`). Env vars from `.env.example`. Set `VITE_INSTRUQT_INVITE_URL` when the track invite exists.
+Redeploy from repo root (keeps Root Directory = `demo`):
+
+```bash
+vercel --prod --scope poulsbopetes-projects
+```
+
+Env vars: `VITE_KIBANA_URL`, `VITE_ES_URL`, `VITE_SECURITY_KIBANA_URL`, `VITE_SECURITY_ES_URL` (see `demo/.env.example`). Set `VITE_INSTRUQT_INVITE_URL` when the track invite exists.
 
 ## Docs
 
