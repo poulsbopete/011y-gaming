@@ -97,6 +97,10 @@ enhanced_loading: null
 **Lab goal:** adopt **14** Aether Games PromQL/Grafana dashboards onto Elastic Observability Serverless.
 
 ```bash
+# Optional if migrate fails on an old CLI flag: refresh the script from GitHub, then run Lab 1.
+curl -fsSL https://raw.githubusercontent.com/poulsbopete/011y-gaming/main/scripts/migrate_grafana_dashboards_to_serverless.sh \
+  -o /root/workshop/scripts/migrate_grafana_dashboards_to_serverless.sh
+chmod +x /root/workshop/scripts/migrate_grafana_dashboards_to_serverless.sh
 bash /root/workshop/scripts/migrate_grafana_dashboards_to_serverless.sh
 ```
 
