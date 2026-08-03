@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Lab 1 (Instruqt): OTLP → grafana-migrate → upload (--native-promql) → alert publisher.
+# Lab 1 (Instruqt): OTLP → grafana-migrate → upload (native PromQL) → alert publisher.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
@@ -89,11 +89,23 @@ if [ "${WORKSHOP_MIG_ES_VALIDATE:-0}" = "1" ]; then
 else
   echo "==> [2/5] grafana-migrate (Kibana-only upload; ES_URL in env ignored for validation — WORKSHOP_MIG_ES_VALIDATE=1 to enable)..."
 fi
+
+# observability-migration-platform renamed --native-promql → --translation-mode native.
+NATIVE_PROMQL_ARGS=()
+_help="$("${GRAFANA_MIGRATE}" --help 2>&1 || true)"
+if grep -q -- '--translation-mode' <<<"${_help}"; then
+  NATIVE_PROMQL_ARGS=(--translation-mode native)
+elif grep -q -- '--native-promql' <<<"${_help}"; then
+  NATIVE_PROMQL_ARGS=(--native-promql)
+else
+  echo "WARN: grafana-migrate has neither --translation-mode nor --native-promql; using CLI defaults." >&2
+fi
+
 "${GRAFANA_MIGRATE}" \
   --source files \
   --input-dir "${ROOT}/assets/grafana" \
   --output-dir "${OUT}" \
-  --native-promql \
+  "${NATIVE_PROMQL_ARGS[@]}" \
   --data-view "metrics-*" \
   --esql-index "metrics-*" \
   --logs-index "logs-*" \
