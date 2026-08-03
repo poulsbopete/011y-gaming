@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Play, RotateCcw } from 'lucide-react';
-import { ModuleHeader, StatCard, DeepLinkBar, PrimaryCta } from './ui';
+import { Play, RotateCcw, Radio } from 'lucide-react';
+import { ModuleHeader, StatCard, DeepLinkBar, PrimaryCta, GhostCta } from './ui';
 import {
   getO11yKibanaUrl,
   kibanaHostLabel,
@@ -18,7 +18,7 @@ import {
 const WORKFLOW_STEPS = [
   { id: 'detect', label: 'Detect matchmaking p95 spike' },
   { id: 'correlate', label: 'Correlate auth failures + session gateway' },
-  { id: 'a2a', label: 'A2A hint → Security fraud agent (stub)' },
+  { id: 'a2a', label: 'A2A hint → Security fraud agent' },
   { id: 'remediate', label: 'Scale session-gateway / shed queue' },
   { id: 'verify', label: 'Verify SLO burn recovering' },
 ];
@@ -31,7 +31,7 @@ function buildSeries(points, spikeAt) {
   });
 }
 
-function Sparkline({ series, accent = '#22d3ee' }) {
+function Sparkline({ series, accent = '#2dd4bf', animate }) {
   const w = 320;
   const h = 72;
   const max = Math.max(...series, 1);
@@ -46,8 +46,15 @@ function Sparkline({ series, accent = '#22d3ee' }) {
     .join(' ');
 
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-20" preserveAspectRatio="none">
-      <polyline fill="none" stroke={accent} strokeWidth="2.5" strokeLinejoin="round" points={pts} />
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-24" preserveAspectRatio="none">
+      <polyline
+        fill="none"
+        stroke={accent}
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+        points={pts}
+        className={animate ? 'spark-line' : undefined}
+      />
     </svg>
   );
 }
@@ -62,13 +69,14 @@ export function LaunchNightDemo() {
   const dashboardsHref = kibanaDashboardsUrl(kibana);
   const rulesHref = kibanaRulesUrl(kibana);
   const metricsHref = kibanaMetricsExplorerUrl(kibana);
-  const [phase, setPhase] = useState('idle'); // idle | running | resolved
+  const [phase, setPhase] = useState('idle');
   const [series, setSeries] = useState(() => buildSeries(24, null));
   const [players, setPlayers] = useState(184_200);
   const [queue, setQueue] = useState(420);
   const [authFail, setAuthFail] = useState(1.2);
   const [steps, setSteps] = useState(WORKFLOW_STEPS.map((s) => ({ ...s, status: 'pending' })));
   const [log, setLog] = useState([]);
+  const [seeding, setSeeding] = useState(false);
   const timers = useRef([]);
 
   function clearTimers() {
@@ -150,134 +158,141 @@ export function LaunchNightDemo() {
     }, 6000);
   }
 
+  async function seedMetrics() {
+    setSeeding(true);
+    try {
+      const r = await fetch('/api/seed-metrics', { method: 'POST' });
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        pushLog(`Seed failed: ${body.error || r.status}`);
+        return;
+      }
+      pushLog(`Seeded metrics+traces → ${project} (wait ~30s, then open APM)`);
+    } catch (e) {
+      pushLog(`Seed error: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setSeeding(false);
+    }
+  }
+
   const statusColor = {
-    pending: 'bg-white/10 text-mist',
-    running: 'bg-cyan/20 text-cyan',
-    completed: 'bg-amber/20 text-amber',
+    pending: 'text-mist/50',
+    running: 'text-cyan',
+    completed: 'text-amber',
   };
+
+  const links = [
+    { href: discoverHref, label: 'Discover', primary: true },
+    { href: apmHref, label: 'APM' },
+    { href: matchmakingHref, label: 'Matchmaking' },
+    { href: metricsHref, label: 'Metrics' },
+    { href: tracesHref, label: 'Traces' },
+    { href: dashboardsHref, label: 'Dashboards' },
+    { href: rulesHref, label: 'Rules' },
+  ];
 
   return (
     <div>
       <ModuleHeader
         eyebrow="Launch night"
         title="Run a launch-window incident"
-        subtitle={`Links open live Kibana on ${project}. Seed metrics+traces first so APM Services and Discover show Aether data.`}
+        subtitle="Walk matchmaking spike → auth correlation → A2A Security hint → remediation. Seed live telemetry, then open the same story in Kibana."
+        actions={
+          <div className="flex flex-wrap gap-3">
+            <PrimaryCta onClick={runIncident} disabled={phase === 'running'}>
+              {phase === 'running' ? (
+                'Running…'
+              ) : phase === 'resolved' ? (
+                <>
+                  <RotateCcw className="w-4 h-4" /> Replay demo
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4" /> Run launch-night demo
+                </>
+              )}
+            </PrimaryCta>
+            <GhostCta onClick={seedMetrics} disabled={seeding}>
+              <Radio className="w-4 h-4" />
+              {seeding ? 'Seeding…' : 'Seed live metrics'}
+            </GhostCta>
+          </div>
+        }
       >
-        <DeepLinkBar
-          links={[
-            { href: discoverHref, label: 'Discover', primary: true },
-            { href: apmHref, label: 'APM' },
-            { href: matchmakingHref, label: 'Matchmaking' },
-            { href: metricsHref, label: 'Metrics' },
-            { href: tracesHref, label: 'Traces' },
-            { href: dashboardsHref, label: 'Dashboards' },
-            { href: rulesHref, label: 'Rules' },
-          ]}
-        />
-        <PrimaryCta onClick={runIncident} disabled={phase === 'running'}>
-          {phase === 'running' ? (
-            'Running…'
-          ) : phase === 'resolved' ? (
-            <>
-              <RotateCcw className="w-4 h-4" /> Replay
-            </>
-          ) : (
-            <>
-              <Play className="w-4 h-4" /> Run launch-night demo
-            </>
-          )}
-        </PrimaryCta>
-        <PrimaryCta
-          onClick={async () => {
-            try {
-              const r = await fetch('/api/seed-metrics', { method: 'POST' });
-              const body = await r.json().catch(() => ({}));
-              if (!r.ok) {
-                pushLog(`Seed failed: ${body.error || r.status}`);
-                return;
-              }
-              pushLog(`Seeded metrics+traces → ${project} (wait ~30s, then open APM / Discover)`);
-            } catch (e) {
-              pushLog(`Seed error: ${e instanceof Error ? e.message : String(e)}`);
-            }
-          }}
-        >
-          Seed live metrics
-        </PrimaryCta>
+        <DeepLinkBar links={links} label={`Kibana · ${project}`} />
       </ModuleHeader>
 
-      <p className="mb-6 text-xs text-mist">
-        Live project:{' '}
-        <a href={kibana} target="_blank" rel="noopener noreferrer" className="text-cyan hover:text-amber font-mono">
-          {project}
-        </a>
-        {' · '}
-        Click any chip or KPI to open that view in Elastic (new tab).
-      </p>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-6 mb-10 rise-in-delay">
         <StatCard
           label="Concurrent players"
           value={players.toLocaleString()}
-          trend={phase === 'running' ? 'Evening peak surge' : 'Open Discover services'}
+          trend={phase === 'running' ? 'Evening peak surge' : 'Discover services'}
           href={discoverHref}
         />
         <StatCard
           label="Matchmaking queue"
           value={queue.toLocaleString()}
-          trend={queue > 1500 ? 'Elevated — open APM matchmaking' : 'Open APM matchmaking'}
+          trend={queue > 1500 ? 'Elevated wait' : 'APM matchmaking'}
           accent={queue > 1500 ? 'amber' : 'cyan'}
           href={matchmakingHref}
         />
         <StatCard
-          label="Auth failure %"
+          label="Auth failure"
           value={authFail.toFixed(1)}
           unit="%"
-          trend={authFail > 5 ? 'Spike — open auth Discover' : 'Open auth in Discover'}
+          trend={authFail > 5 ? 'Spike — investigate' : 'Auth in Discover'}
           accent={authFail > 5 ? 'amber' : 'cyan'}
           href={kibanaDiscoverUrl(kibana, { query: AETHER_AUTH_ESQL })}
         />
         <StatCard
           label="Incident phase"
           value={phase === 'idle' ? 'Ready' : phase === 'running' ? 'Active' : 'Resolved'}
-          trend="Open APM inventory"
+          trend="APM inventory"
           href={apmHref}
         />
       </div>
 
-      <div className="grid lg:grid-cols-5 gap-4 mb-6">
-        <div className="lg:col-span-3 rounded-xl border border-white/10 bg-arena-elevated/80 p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-display text-sm font-bold text-fog">Matchmaking wait (p95 proxy)</h3>
-            <span className="text-[10px] uppercase tracking-wider text-mist">
-              {phase === 'running' ? 'Live spike' : 'Synthetic series'}
+      <div className="grid lg:grid-cols-5 gap-10 mb-10 rise-in-delay-2">
+        <div className="lg:col-span-3">
+          <div className="flex items-baseline justify-between gap-3 mb-4">
+            <h2 className="font-display text-sm font-bold text-fog tracking-wide uppercase">
+              Matchmaking wait
+            </h2>
+            <span className="text-[10px] uppercase tracking-[0.14em] text-mist">
+              {phase === 'running' ? 'Live spike' : 'Simulated'}
             </span>
           </div>
-          <Sparkline series={series} accent={phase === 'running' ? '#fbbf24' : '#22d3ee'} />
-          <p className="text-xs text-mist mt-3">
-            Chart is simulated for the POV. After <span className="text-fog">Seed live metrics</span>, APM / Discover
-            show real OTLP data in <span className="font-mono text-cyan">{project}</span>.
+          <Sparkline
+            series={series}
+            accent={phase === 'running' ? '#e8a838' : '#2dd4bf'}
+            animate={phase !== 'idle'}
+          />
+          <p className="text-xs text-mist mt-4 leading-relaxed max-w-lg">
+            Chart is simulated for the POV. After seeding, APM and Discover show real OTLP data in{' '}
+            <span className="font-mono text-cyan">{project}</span>.
           </p>
         </div>
 
-        <div className="lg:col-span-2 rounded-xl border border-white/10 bg-arena-elevated/80 p-5">
-          <h3 className="font-display text-sm font-bold text-fog mb-4">Remediation workflow</h3>
-          <ol className="space-y-2.5">
-            {steps.map((s) => (
-              <li key={s.id} className="flex items-center gap-2 text-sm">
-                <span className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded ${statusColor[s.status]}`}>
-                  {s.status}
+        <div className="lg:col-span-2">
+          <h2 className="font-display text-sm font-bold text-fog tracking-wide uppercase mb-4">
+            Remediation
+          </h2>
+          <ol className="space-y-3">
+            {steps.map((s, i) => (
+              <li key={s.id} className="flex gap-3 text-sm">
+                <span className={`font-mono text-[11px] tabular-nums pt-0.5 ${statusColor[s.status]}`}>
+                  {String(i + 1).padStart(2, '0')}
                 </span>
-                <span className="text-mist">{s.label}</span>
+                <span className={s.status === 'pending' ? 'text-mist/60' : 'text-fog'}>{s.label}</span>
               </li>
             ))}
           </ol>
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/10 bg-arena/60 p-4 font-mono text-[11px] text-mist space-y-1 min-h-[7rem]">
+      <div className="border-t border-white/10 pt-4 font-mono text-[11px] text-mist space-y-1.5 min-h-[6.5rem]">
         {log.length === 0 ? (
-          <p className="text-mist/50">Event log — press Run launch-night demo</p>
+          <p className="text-mist/45">Event log — run the launch-night demo</p>
         ) : (
           log.map((line) => <p key={line}>{line}</p>)
         )}

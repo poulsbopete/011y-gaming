@@ -28,22 +28,23 @@ export default function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const invite = getInstruqtInviteUrl();
   const Active = MODULE_COMPONENTS[active];
-  const meta = MODULES.find((m) => m.id === active);
 
   return (
-    <div className="min-h-screen bg-arena text-fog">
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-arena/90 backdrop-blur-xl">
+    <div className="min-h-screen app-atmosphere text-fog relative">
+      <div className="pointer-events-none absolute inset-0 app-grid" aria-hidden />
+
+      <header className="sticky top-0 z-50 border-b border-white/8 bg-arena/80 backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-6">
-          <div className="flex items-center justify-between h-14">
+          <div className="flex items-center justify-between h-16">
             <button
               type="button"
               onClick={() => setActive('launch')}
-              className="font-display text-lg font-extrabold tracking-tight text-fog"
+              className="font-display text-xl font-extrabold tracking-tight text-fog"
             >
               Aether <span className="text-cyan">Games</span>
             </button>
 
-            <nav className="hidden md:flex items-center gap-1">
+            <nav className="hidden md:flex items-center gap-0.5">
               {MODULES.map((mod) => {
                 const on = active === mod.id;
                 return (
@@ -51,22 +52,18 @@ export default function App() {
                     key={mod.id}
                     type="button"
                     onClick={() => setActive(mod.id)}
-                    className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-                      on ? 'bg-white/10 text-fog font-medium' : 'text-mist hover:text-fog hover:bg-white/5'
+                    className={`px-3 py-2 text-sm transition-colors relative ${
+                      on ? 'text-fog font-semibold' : 'text-mist hover:text-fog'
                     }`}
                   >
                     {mod.label}
-                    {mod.live && !on && <span className="ml-1.5 text-[10px] text-cyan">●</span>}
-                    {mod.live && on && <span className="ml-1.5 text-[10px] text-cyan animate-pulse">●</span>}
+                    {on && (
+                      <span className="absolute bottom-0 left-3 right-3 h-px bg-cyan" />
+                    )}
                   </button>
                 );
               })}
             </nav>
-
-            <div className="hidden md:flex items-center gap-2 text-[10px] uppercase tracking-wider text-mist">
-              <span className={`w-1.5 h-1.5 rounded-full ${meta?.live ? 'bg-cyan animate-pulse' : 'bg-mist/40'}`} />
-              {meta?.live ? 'Interactive demo' : 'POV module'}
-            </div>
 
             <button
               type="button"
@@ -80,7 +77,7 @@ export default function App() {
         </div>
 
         {mobileOpen && (
-          <nav className="md:hidden border-t border-white/10 px-6 py-3 space-y-1 bg-arena">
+          <nav className="md:hidden border-t border-white/8 px-6 py-4 space-y-1 bg-arena">
             {MODULES.map((mod) => (
               <button
                 key={mod.id}
@@ -89,7 +86,7 @@ export default function App() {
                   setActive(mod.id);
                   setMobileOpen(false);
                 }}
-                className={`block w-full text-left py-2 text-base ${
+                className={`block w-full text-left py-2.5 text-base ${
                   active === mod.id ? 'text-fog font-semibold' : 'text-mist'
                 }`}
               >
@@ -100,30 +97,31 @@ export default function App() {
         )}
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-10 md:py-14">
+      <main className="relative max-w-5xl mx-auto px-6 py-10 md:py-14">
         {active === 'architecture' ? <ArchitectureSection embedded /> : <Active />}
       </main>
 
-      <footer className="border-t border-white/8 px-6 py-10">
-        <div className="mx-auto max-w-5xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <footer className="relative border-t border-white/8 px-6 py-10 mt-8">
+        <div className="mx-auto max-w-5xl flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
           <div>
-            <p className="font-display font-bold text-fog">Aether Games</p>
-            <p className="text-xs text-mist mt-1">Fictional AAA publisher · Elastic Observability + Security demo</p>
+            <p className="font-display text-lg font-bold text-fog">
+              Aether <span className="text-cyan">Games</span>
+            </p>
+            <p className="text-xs text-mist mt-1.5 max-w-sm leading-relaxed">
+              Fictional AAA publisher · Elastic Observability + Security demo for metrics adoption
+            </p>
           </div>
-          {invite ? (
-            <a href={invite} target="_blank" rel="noopener noreferrer" className="text-sm text-cyan hover:text-amber">
-              Instruqt workshop →
-            </a>
-          ) : (
-            <a
-              href="https://play.instruqt.com/manage/elastic/tracks/aether-games-metrics-adoption"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-cyan hover:text-amber"
-            >
-              Instruqt track →
-            </a>
-          )}
+          <a
+            href={
+              invite ||
+              'https://play.instruqt.com/manage/elastic/tracks/aether-games-metrics-adoption'
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-cyan hover:text-amber transition-colors"
+          >
+            Instruqt workshop →
+          </a>
         </div>
       </footer>
     </div>

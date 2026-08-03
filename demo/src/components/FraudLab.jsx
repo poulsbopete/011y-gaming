@@ -104,9 +104,15 @@ export function FraudLab() {
       <ModuleHeader
         eyebrow="Account fraud"
         title="Investigate gaming fraud signals"
-        subtitle="Simulate UI triage here, then seed live alerts into Security Serverless. Attack Discovery needs those alerts plus an LLM connector and Run."
+        subtitle="Triage simulated alerts here, seed live Security alerts, then continue in Kibana. Attack Discovery needs an LLM connector after Alerts populate."
+        actions={
+          <PrimaryCta onClick={seedLiveFraud} disabled={seeding}>
+            {seeding ? 'Seeding…' : 'Seed live Security alerts'}
+          </PrimaryCta>
+        }
       >
         <DeepLinkBar
+          label="Security"
           links={[
             { href: kibanaSecurityUrl('alerts'), label: 'Alerts', primary: true },
             { href: kibanaSecurityUrl('cases'), label: 'Cases' },
@@ -114,9 +120,6 @@ export function FraudLab() {
             { href: kibanaSecurityUrl('attackDiscovery'), label: 'Attack discovery' },
           ]}
         />
-        <PrimaryCta onClick={seedLiveFraud} disabled={seeding}>
-          {seeding ? 'Seeding…' : 'Seed live Security alerts'}
-        </PrimaryCta>
       </ModuleHeader>
 
       {seedMsg && (

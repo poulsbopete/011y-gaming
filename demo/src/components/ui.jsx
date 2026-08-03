@@ -16,55 +16,58 @@ export function ExtLink({ href, children, className = '' }) {
 }
 
 export function PrimaryCta({ href, children, external = true, onClick, disabled }) {
+  const cls =
+    'inline-flex items-center justify-center gap-2 rounded-md bg-cyan px-5 py-2.5 font-display text-sm font-bold text-arena hover:bg-amber transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
   if (onClick || !href) {
     return (
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={disabled}
-        className="inline-flex items-center gap-2 rounded-md bg-cyan px-5 py-2.5 font-display text-sm font-bold text-arena hover:bg-amber transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
+      <button type="button" onClick={onClick} disabled={disabled} className={cls}>
         {children}
       </button>
     );
   }
   return (
-    <a
-      href={href}
-      {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-      className="inline-flex items-center gap-2 rounded-md bg-cyan px-5 py-2.5 font-display text-sm font-bold text-arena hover:bg-amber transition-colors"
-    >
+    <a href={href} {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})} className={cls}>
       {children}
     </a>
   );
 }
 
-export function GhostCta({ href, children, external = true }) {
-  if (!href) return null;
+export function GhostCta({ href, children, external = true, onClick, disabled }) {
+  const cls =
+    'inline-flex items-center justify-center gap-2 rounded-md border border-white/18 px-5 py-2.5 font-display text-sm text-fog hover:border-cyan hover:text-cyan transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
+  if (onClick || !href) {
+    return (
+      <button type="button" onClick={onClick} disabled={disabled} className={cls}>
+        {children}
+      </button>
+    );
+  }
   return (
-    <a
-      href={href}
-      {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-      className="inline-flex items-center gap-2 rounded-md border border-white/20 px-5 py-2.5 font-display text-sm text-fog hover:border-cyan hover:text-cyan transition-colors"
-    >
+    <a href={href} {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})} className={cls}>
       {children}
     </a>
   );
 }
 
-export function ModuleHeader({ eyebrow, title, subtitle, children }) {
+/** Stacked module intro — title full-width, actions below (avoids squeezed subtitle columns). */
+export function ModuleHeader({ eyebrow, title, subtitle, actions, children }) {
   return (
-    <header className="mb-8 md:mb-10">
+    <header className="mb-8 md:mb-10 rise-in">
       {eyebrow && (
-        <p className="text-xs uppercase tracking-[0.2em] text-amber mb-3 font-medium">{eyebrow}</p>
+        <p className="text-[11px] uppercase tracking-[0.22em] text-amber mb-3 font-medium">{eyebrow}</p>
       )}
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
-        <div className="min-w-0">
-          <h1 className="font-display text-3xl md:text-4xl font-bold text-fog tracking-tight">{title}</h1>
-          {subtitle && <p className="text-mist mt-3 max-w-2xl text-base leading-relaxed">{subtitle}</p>}
+      <h1 className="font-display text-3xl md:text-[2.75rem] font-bold text-fog tracking-tight leading-[1.1] max-w-3xl">
+        {title}
+      </h1>
+      {subtitle && (
+        <p className="text-mist mt-4 max-w-2xl text-[15px] md:text-base leading-relaxed">{subtitle}</p>
+      )}
+      {(actions || children) && (
+        <div className="mt-6 flex flex-col gap-4">
+          {actions}
+          {children}
         </div>
-        {children && <div className="flex flex-wrap items-center gap-3 shrink-0">{children}</div>}
-      </div>
+      )}
     </header>
   );
 }
@@ -74,21 +77,21 @@ export function StatCard({ label, value, unit, trend, href, accent = 'cyan' }) {
   const inner = (
     <>
       {href && (
-        <span className="absolute top-3 right-3 text-mist/50 group-hover:text-cyan">
+        <span className="absolute top-3 right-3 text-mist/40 group-hover:text-cyan transition-colors">
           <ExternalLink className="w-3.5 h-3.5" />
         </span>
       )}
-      <p className="text-[11px] uppercase tracking-wider text-mist">{label}</p>
-      <p className={`font-display text-2xl md:text-3xl font-bold mt-1 ${accentClass} animate-count`}>
+      <p className="text-[10px] uppercase tracking-[0.14em] text-mist">{label}</p>
+      <p className={`font-display text-2xl md:text-[1.75rem] font-bold mt-2 tabular-nums ${accentClass} animate-count`}>
         {value}
         {unit && <span className="text-sm font-normal text-mist ml-1">{unit}</span>}
       </p>
-      {trend && <p className="text-xs text-mist mt-2 leading-snug">{trend}</p>}
+      {trend && <p className="text-xs text-mist/80 mt-2 leading-snug">{trend}</p>}
     </>
   );
 
   const cls =
-    'group relative block rounded-xl border border-white/10 bg-arena-elevated/80 p-4 hover:border-cyan/40 transition-colors text-left w-full';
+    'group relative block border-t border-white/12 pt-4 pr-6 pb-1 text-left w-full hover:border-cyan/50 transition-colors';
 
   if (href) {
     return (
@@ -100,30 +103,32 @@ export function StatCard({ label, value, unit, trend, href, accent = 'cyan' }) {
   return <div className={cls}>{inner}</div>;
 }
 
-export function DeepLinkBar({ links }) {
+export function DeepLinkBar({ links, label = 'Open in Elastic' }) {
+  const items = links.filter((l) => l.href);
+  if (!items.length) return null;
   return (
-    <div className="flex flex-wrap gap-2">
-      {links.filter((l) => l.href).map((l) => (
-        <a
-          key={l.label}
-          href={l.href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-            l.primary
-              ? 'bg-cyan text-arena hover:bg-amber'
-              : 'border border-white/15 text-mist hover:border-cyan hover:text-cyan'
-          }`}
-        >
-          {l.label}
-          <ExternalLink className="w-3 h-3" />
-        </a>
-      ))}
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:gap-4">
+      <span className="text-[10px] uppercase tracking-[0.16em] text-mist shrink-0">{label}</span>
+      <div className="flex flex-wrap gap-x-4 gap-y-2">
+        {items.map((l) => (
+          <a
+            key={l.label}
+            href={l.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`inline-flex items-center gap-1 text-sm transition-colors ${
+              l.primary ? 'text-cyan hover:text-amber font-medium' : 'text-mist hover:text-fog'
+            }`}
+          >
+            {l.label}
+            <ExternalLink className="w-3 h-3 opacity-60" />
+          </a>
+        ))}
+      </div>
     </div>
   );
 }
 
-/** Scroll-page section wrapper (kept for Architecture / legacy sections if needed) */
 export function Section({ id, eyebrow, title, lead, children }) {
   return (
     <section id={id} className="relative px-6 py-20 md:py-28 border-t border-white/8">
