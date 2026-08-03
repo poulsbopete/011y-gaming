@@ -116,6 +116,10 @@ fi
   --ensure-data-views \
   --fetch-alerts
 
+echo "    Patching cloud.region → region on uploaded Aether dashboards (OTLP fleet attribute)..."
+"${PY}" "${ROOT}/tools/patch_aether_dashboard_region_fields.py" --search Aether \
+  || echo "    WARN: region field patch failed (region breakdown panels may error until re-run)." >&2
+
 # Support both old layout (yaml/) and new (dashboards/yaml/) from newer mig-to-kbn.
 if [ -d "${OUT}/dashboards/yaml" ]; then
   n_yaml="$(find "${OUT}/dashboards/yaml" -maxdepth 1 -name '*.yaml' 2>/dev/null | wc -l | tr -d ' ')"
