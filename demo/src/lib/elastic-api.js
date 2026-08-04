@@ -159,10 +159,10 @@ export function kibanaRulesUrl(kibanaBase) {
 
 export function kibanaSecurityUrl(section = 'alerts') {
   const base = getSecurityKibanaUrl();
-  // Force Default space — custom spaces (e.g. "Security - psimkins") won't show
-  // alerts seeded with kibana.space_ids: ["default"].
+  // Always pin Default space so seeded alerts (kibana.space_ids: default) are visible.
+  // Custom spaces like "Security - psimkins" will not show those docs.
   const space = (import.meta.env.VITE_SECURITY_SPACE_ID || 'default').trim() || 'default';
-  const prefix = space === 'default' ? '' : `/s/${encodeURIComponent(space)}`;
+  const prefix = `/s/${encodeURIComponent(space)}`;
   const paths = {
     alerts: '/app/security/alerts',
     cases: '/app/security/cases',
