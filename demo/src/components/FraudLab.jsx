@@ -109,7 +109,7 @@ export function FraudLab() {
       <ModuleHeader
         eyebrow="Account fraud"
         title="Investigate gaming fraud signals"
-        subtitle="Triage simulated alerts here, then Seed live Security alerts (needs SECURITY_ES_* on Vercel). Open Alerts in the Default space — custom spaces won't show seeded docs. Attack Discovery needs an LLM connector after Alerts populate."
+        subtitle="Triage simulated alerts here, then Seed live Security alerts. Open Alerts and Entity analytics in the Default space (custom spaces like “Security - psimkins” stay empty). Attack Discovery needs an LLM connector after Alerts populate."
         actions={
           <PrimaryCta onClick={seedLiveFraud} disabled={seeding}>
             {seeding ? 'Seeding…' : 'Seed live Security alerts'}
