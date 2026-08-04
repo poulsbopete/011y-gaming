@@ -45,6 +45,7 @@ WORKFLOWS_DIR = os.path.join(ROOT, "workflows")
 DEFAULT_FILES = (
     "metrics-adoption-recommendations.yaml",
     "aether-dashboard-briefs.yaml",
+    "aether-ml-anomaly-cps-security.yaml",
 )
 
 
@@ -195,6 +196,7 @@ def main() -> int:
     print("==> Done. Manual run: Management → Workflows →")
     print("    • Metrics adoption — AI dashboard notes")
     print("    • Aether — dashboard briefs (Agent Builder)")
+    print("    • Aether — ML anomaly → Security via CPS")
     return 0 if ok else 1
 
 

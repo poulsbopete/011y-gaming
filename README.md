@@ -14,7 +14,7 @@ Dual deliverable for gaming platform POV conversations:
 ## Value narrative
 
 - Consolidate Prometheus/Grafana dashboards, alerts, and Prom metrics into Elastic at a better price point
-- Account / platform fraud lives in Elastic Security; **CCS** correlates Elastic Serverless projects; **A2A** federates non-Elastic solutions
+- Account / platform fraud lives in Elastic Security; **CPS** (cross-project search) correlates Elastic Serverless projects; **A2A** federates non-Elastic solutions
 - Instruqt stands up **one** Observability Serverless project per play → Security federation is **stubbed** (A2A-shaped) in Lab 2
 
 ## Fixed demo endpoints
@@ -90,6 +90,7 @@ Env vars: `VITE_KIBANA_URL`, `VITE_ES_URL`, `VITE_SECURITY_KIBANA_URL`, `VITE_SE
 - [`docs/workshop-design.md`](docs/workshop-design.md)
 - [`docs/invite.md`](docs/invite.md)
 - [`docs/a2a-security-stub.md`](docs/a2a-security-stub.md)
+- [`docs/ml-anomaly-cps-security.md`](docs/ml-anomaly-cps-security.md)
 
 ## Agent Builder workflows
 
@@ -99,6 +100,9 @@ Deployed by `scripts/deploy_workshop_workflows.py` (Lab 1 migrate + Lab 2 publis
 | --- | --- |
 | `workflows/metrics-adoption-recommendations.yaml` | AI notes for Grafana/Datadog metrics adoption |
 | `workflows/aether-dashboard-briefs.yaml` | Per-Aether-dashboard summary + remediation steps |
+| `workflows/aether-ml-anomaly-cps-security.yaml` | ML auth anomalies → Security correlation via CPS |
+
+ML job helper: `scripts/create_aether_ml_anomaly_job.py` — see [`docs/ml-anomaly-cps-security.md`](docs/ml-anomaly-cps-security.md).
 
 In Kibana: **Management → Workflows → Aether — dashboard briefs (Agent Builder) → Run**. Output lands in index `aether-dashboard-briefs` and Markdown **workshop-aether-dashboard-briefs**.
 

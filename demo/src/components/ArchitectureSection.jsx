@@ -58,7 +58,7 @@ export function ArchitectureSection({ embedded = false } = {}) {
             </h2>
             <p className="text-mist max-w-2xl text-base md:text-lg leading-relaxed">
               Between Elastic Serverless projects, correlate with{' '}
-              <span className="text-fog font-medium">CCS</span>. Reach{' '}
+              <span className="text-fog font-medium">CPS</span> (cross-project search). Reach{' '}
               <span className="text-fog font-medium">non-Elastic</span> systems with{' '}
               <span className="text-fog font-medium">A2A</span> — scoped agent endpoints, not cluster peering.
             </p>
@@ -77,9 +77,9 @@ export function ArchitectureSection({ embedded = false } = {}) {
           <div className="rounded-lg border border-cyan/25 bg-arena-elevated/70 px-4 py-3 flex gap-3">
             <Link2 className="w-4 h-4 text-cyan shrink-0 mt-0.5" strokeWidth={1.5} />
             <div>
-              <p className="text-xs uppercase tracking-[0.14em] text-cyan mb-1 font-medium">CCS</p>
+              <p className="text-xs uppercase tracking-[0.14em] text-cyan mb-1 font-medium">CPS</p>
               <p className="text-sm text-mist leading-relaxed">
-                Elastic Serverless ↔ Elastic Serverless — search and correlate across Observability and Security without merging clusters.
+                Elastic Serverless ↔ Elastic Serverless — search and correlate across Observability and Security with cross-project search (no cluster peering).
               </p>
             </div>
           </div>
@@ -107,7 +107,7 @@ export function ArchitectureSection({ embedded = false } = {}) {
           />
 
           <p className="relative text-[10px] uppercase tracking-[0.2em] text-mist/80 mb-5 text-center">
-            Elastic Serverless — CCS between projects
+            Elastic Serverless — CPS between projects
           </p>
 
           <div className="relative grid md:grid-cols-[1fr_auto_1fr] gap-6 md:gap-4 items-stretch">
@@ -138,7 +138,7 @@ export function ArchitectureSection({ embedded = false } = {}) {
               <div className="flex md:flex-col items-center gap-2 a2a-bridge">
                 <ArrowRight className="w-5 h-5 text-cyan" />
                 <span className="font-display text-[11px] font-bold uppercase tracking-[0.15em] text-cyan whitespace-nowrap">
-                  CCS
+                  CPS
                 </span>
                 <ArrowRight className="w-5 h-5 text-amber hidden md:block" />
               </div>
@@ -192,7 +192,7 @@ export function ArchitectureSection({ embedded = false } = {}) {
           <p className="relative mt-6 text-center text-xs text-mist/70 max-w-2xl mx-auto leading-relaxed">
             Instruqt Lab 2 stubs an A2A-style response under{' '}
             <code className="text-cyan/90">build/a2a-stub/</code> (one O11Y project per play).
-            This page opens the real Elastic projects — correlate them with CCS in production.
+            This page opens the real Elastic projects — correlate them with CPS in production.
           </p>
         </div>
       </div>

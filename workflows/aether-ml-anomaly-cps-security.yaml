@@ -1,0 +1,141 @@
+version: "1"
+name: Aether — ML anomaly → Security via CPS
+description: |
+  When Observability ML detects anomalous Aether auth failures (or on a manual/scheduled run),
+  this workflow:
+
+  1. Reads recent high-score ML anomaly records from the origin O11Y project
+  2. Uses **cross-project search (CPS)** ES|QL to pull related Security fraud alerts from the
+     linked Security Serverless project
+  3. Asks Agent Builder (`ai.agent`) for a short correlation + remediation brief
+  4. Indexes the brief into **aether-ml-cps-correlations** and refreshes Markdown
+     **workshop-aether-ml-cps-correlation**
+
+  Prerequisites:
+  - ML job `aether-auth-failure-anomaly` (scripts/create_aether_ml_anomaly_job.py --start)
+  - Observability → Security project link for CPS (Cloud Console)
+  - Const `security_cps_alias` matches the linked Security project alias
+enabled: true
+tags:
+  - aether-games
+  - ml
+  - cps
+  - security
+  - DEMO
+triggers:
+  - type: manual
+  - type: scheduled
+    with:
+      every: "15m"
+  - type: alert
+    with:
+      # Fires when the Aether ML anomaly alert rule creates an alert (if wired in Rules UI).
+      rule_tags: ["aether-games", "ml", "cps"]
+
+consts:
+  security_cps_alias: "my-security-project-ac9463"
+  ml_job_id: "aether-auth-failure-anomaly"
+  anomaly_score_min: "50"
+
+steps:
+  - name: workflow-start
+    type: console
+    with:
+      message: |
+        Aether ML → CPS Security correlation started (execution {{ execution.id }}).
+        ML job={{ consts.ml_job_id }} Security CPS alias={{ consts.security_cps_alias }}
+
+  - name: fetch_ml_anomalies
+    type: elasticsearch.request
+    with:
+      method: POST
+      path: /_query
+      body:
+        query: |
+          FROM .ml-anomalies-*
+          | WHERE job_id == "{{ consts.ml_job_id }}"
+            AND record_score >= {{ consts.anomaly_score_min }}
+            AND result_type == "record"
+          | SORT timestamp DESC
+          | KEEP timestamp, job_id, record_score, typical, actual, partition_field_value, by_field_value, function, detector_index
+          | LIMIT 10
+
+  - name: fetch_security_via_cps
+    type: elasticsearch.request
+    with:
+      method: POST
+      path: /_query
+      body:
+        # CPS: qualify Security indices with the linked project alias.
+        # Requires Cloud Console project link (O11Y origin → Security).
+        # If .alerts-* is excluded as a system index in your build, this step may return empty —
+        # the agent brief still uses ML context + demo deep links.
+        query: |
+          FROM {{ consts.security_cps_alias }}:.alerts-security.alerts-default
+          | WHERE kibana.alert.rule.tags LIKE "*Aether*"
+             OR kibana.alert.rule.name LIKE "Aether*"
+             OR labels.studio == "Aether Games"
+          | SORT @timestamp DESC
+          | KEEP @timestamp, kibana.alert.rule.name, kibana.alert.severity, kibana.alert.reason, user.name, host.name, source.ip
+          | LIMIT 10
+
+  - name: agent_correlate
+    type: ai.agent
+    with:
+      message: |
+        You are an Elastic SRE + fraud analyst for **Aether Games**.
+
+        Observability ML anomalies (job {{ consts.ml_job_id }}, score ≥ {{ consts.anomaly_score_min }}):
+        {{ steps.fetch_ml_anomalies.output }}
+
+        Security Serverless alerts via **CPS** (project alias {{ consts.security_cps_alias }}):
+        {{ steps.fetch_security_via_cps.output }}
+
+        Produce markdown (max ~40 lines):
+        1. **Verdict** — one sentence: is this likely launch-window fraud / auth abuse, capacity issue, or unknown?
+        2. **O11Y evidence** — bullets from ML anomalies (score, time, influencers).
+        3. **Security evidence (CPS)** — bullets from Security alerts if present; if empty, say
+           "No CPS Security hits yet — confirm project link + Default-space seeded alerts."
+        4. **Resolve** — 4–6 concrete steps:
+           - Open O11Y Anomaly explorer for {{ consts.ml_job_id }}
+           - Open Security Alerts / Attacks in Default space (my-security-project-ac9463)
+           - Correlate user.name / host.name / source.ip
+           - If auth failure spike + credential stuffing alert: freeze accounts, force reset, enable Attack Discovery Run (LLM)
+           - Reminder: Serverless Elastic↔Elastic uses **CPS** (not A2A); A2A is for non-Elastic agents
+
+        Do not invent hostnames beyond the data provided.
+
+  - name: index_correlation
+    type: elasticsearch.request
+    with:
+      method: POST
+      path: /aether-ml-cps-correlations/_doc
+      body:
+        "@timestamp": "{{ now | date: '%Y-%m-%dT%H:%M:%SZ' }}"
+        execution_id: "{{ execution.id }}"
+        workflow_name: "{{ workflow.name }}"
+        source: ml_anomaly_cps_security
+        ml_job_id: "{{ consts.ml_job_id }}"
+        security_cps_alias: "{{ consts.security_cps_alias }}"
+        brief: "{{ steps.agent_correlate.output.message }}"
+
+  - name: publish_markdown
+    type: kibana.request
+    with:
+      method: POST
+      path: /api/saved_objects/markdown/workshop-aether-ml-cps-correlation?overwrite=true
+      headers:
+        kbn-xsrf: "true"
+      body:
+        attributes:
+          title: "Aether — ML anomaly × Security (CPS)"
+          description: "Agent Builder correlation of O11Y ML anomalies with Security alerts via cross-project search"
+          content: "{{ steps.agent_correlate.output.message }}"
+
+  - name: workflow-done
+    type: console
+    with:
+      message: |
+        Indexed correlation to aether-ml-cps-correlations.
+        Markdown: workshop-aether-ml-cps-correlation
+        Next: Machine Learning → Anomaly explorer, and Security → Alerts (Default space) via CPS-linked project.

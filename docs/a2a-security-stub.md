@@ -13,7 +13,7 @@ Production **Aether Games** architecture still separates concerns:
 
 | Boundary | Pattern |
 | --- | --- |
-| Elastic Serverless ↔ Elastic Serverless (O11Y ↔ Security) | **CCS** (cross-cluster search) |
+| Elastic Serverless ↔ Elastic Serverless (O11Y ↔ Security) | **CPS** (cross-project search) |
 | Elastic ↔ non-Elastic (Grafana, Datadog, custom SIEM, studio backends) | **A2A** (scoped agent endpoints / workflows) |
 
 Lab 2 still writes an **A2A-shaped stub** so learners see a federation payload without a second Serverless project in Instruqt. The Vercel A2A page shows the live projects and the CCS vs A2A split.
