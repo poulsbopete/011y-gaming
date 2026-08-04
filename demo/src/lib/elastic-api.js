@@ -168,7 +168,7 @@ export function kibanaSecurityUrl(section = 'alerts') {
     cases: '/app/security/cases',
     rules: '/app/security/rules',
     overview: '/app/security/overview',
-    entityAnalytics: '/app/security/explore/users',
+    entityAnalytics: '/app/security/entity_analytics',
     attackDiscovery: '/app/security/attack_discovery',
   };
   return `${base}${prefix}${paths[section] || paths.alerts}`;

@@ -1,14 +1,10 @@
 /**
- * Seed Aether Games fraud alerts into Elastic Security Serverless.
- * Indexes synthetic documents into .alerts-security.alerts-default.
+ * Seed Aether Games fraud alerts (+ entity risk scores) into Elastic Security Serverless.
  *
  * Server-only env (never VITE_*):
- *   SECURITY_ES_URL      — Security project ES URL (required)
- *   SECURITY_ES_API_KEY  — API key with write to alert indices (required)
- *   SECURITY_SPACE_IDS   — comma-separated Kibana space ids (default: default)
- *
- * Do NOT fall back to ES_URL / ES_API_KEY (those point at Observability and
- * reject .alerts-security.* writes).
+ *   SECURITY_ES_URL / SECURITY_ES_API_KEY — required (Security project)
+ *   SECURITY_KIBANA_URL — optional; derived from ES URL (.es. → .kb.) when unset
+ *   SECURITY_SPACE_IDS — comma-separated Kibana space ids (default: default)
  *
  * POST /api/seed-fraud
  * GET  /api/seed-fraud → { configured, host, spaceIds }
@@ -31,13 +27,22 @@ function spaceIds() {
   return ids.length ? ids : ['default'];
 }
 
+function kibanaUrlFromEs(esUrl) {
+  const explicit = (process.env.SECURITY_KIBANA_URL || '').trim().replace(/\/$/, '');
+  if (explicit) return explicit;
+  if (!esUrl) return '';
+  return esUrl.replace('.es.', '.kb.');
+}
+
 function creds() {
   const url = (process.env.SECURITY_ES_URL || '').trim().replace(/\/$/, '');
   const apiKey = (process.env.SECURITY_ES_API_KEY || '').trim();
+  const kibana = kibanaUrlFromEs(url);
   const o11yFallbackSet = Boolean(process.env.ES_URL || process.env.ES_API_KEY);
   return {
     url,
     apiKey,
+    kibana,
     source: url ? 'SECURITY_ES_URL' : null,
     o11yFallbackSet,
     spaces: spaceIds(),
@@ -49,6 +54,14 @@ function looksLikeObservability(url) {
   return host.includes('otel-demo') || host.startsWith('otel-');
 }
 
+function levelForScore(score) {
+  if (score >= 90) return 'Critical';
+  if (score >= 70) return 'High';
+  if (score >= 40) return 'Moderate';
+  if (score >= 20) return 'Low';
+  return 'Unknown';
+}
+
 function buildAlert({
   ruleName,
   ruleId,
@@ -56,6 +69,7 @@ function buildAlert({
   riskScore,
   description,
   user,
+  host,
   sourceIp,
   region,
   tactics = [],
@@ -106,6 +120,7 @@ function buildAlert({
     },
     message: description,
     user: { name: user },
+    host: { name: host },
     source: { ip: sourceIp, geo: { region_name: region } },
     labels: { studio: 'Aether Games', demo: 'vercel-fraud-seed' },
     kibana: {
@@ -131,7 +146,7 @@ function buildAlert({
         severity,
         risk_score: riskScore,
         depth: 1,
-        reason: `${ruleName} for ${user} from ${sourceIp} (${region})`,
+        reason: `${ruleName} for ${user} / ${host} from ${sourceIp} (${region})`,
         original_time: now,
         uuid: docId,
         url: '',
@@ -153,58 +168,156 @@ function buildAlert({
   };
 }
 
+function buildRiskDoc({ entityType, name, score, alertCount }) {
+  const now = new Date().toISOString();
+  const level = levelForScore(score);
+  const risk = {
+    id_field: `${entityType}.name`,
+    id_value: name,
+    calculated_level: level,
+    calculated_score: score,
+    calculated_score_norm: score,
+    category_1_count: alertCount,
+    category_1_score: score,
+    inputs: [],
+  };
+  return {
+    '@timestamp': now,
+    [entityType]: { name, risk },
+    risk,
+  };
+}
+
+const FRAUD_CASES = [
+  {
+    ruleName: 'Aether — Credential stuffing on account platform',
+    ruleId: 'aether-fraud-credential-stuffing',
+    severity: 'critical',
+    riskScore: 99,
+    description: 'Auth failure spike correlated with known bad IP ranges during launch window.',
+    user: 'aether-user-88421',
+    host: 'aether-auth-usw2-01',
+    sourceIp: '203.0.113.44',
+    region: 'us-west',
+    tactics: [{ id: 'TA0006', name: 'Credential Access' }],
+    techniques: [{ id: 'T1110.004', name: 'Credential Stuffing' }],
+  },
+  {
+    ruleName: 'Aether — Multi-account abuse (shared device)',
+    ruleId: 'aether-fraud-multi-account',
+    severity: 'high',
+    riskScore: 84,
+    description: '12 new accounts created from shared device fingerprint within 18 minutes.',
+    user: 'device-fp-9c2a',
+    host: 'aether-account-euw1-03',
+    sourceIp: '198.51.100.17',
+    region: 'eu-west',
+    tactics: [{ id: 'TA0001', name: 'Initial Access' }],
+    techniques: [{ id: 'T1078', name: 'Valid Accounts' }],
+  },
+  {
+    ruleName: 'Aether — Payment fraud (stolen instrument)',
+    ruleId: 'aether-fraud-payment',
+    severity: 'high',
+    riskScore: 88,
+    description: 'Checkout velocity anomaly on digital storefront — stolen payment instrument pattern.',
+    user: 'buyer-tok-stub',
+    host: 'aether-store-use1-02',
+    sourceIp: '192.0.2.91',
+    region: 'us-east',
+    tactics: [{ id: 'TA0040', name: 'Impact' }],
+    techniques: [{ id: 'T1496', name: 'Resource Hijacking' }],
+  },
+  {
+    ruleName: 'Aether — Session hijack candidate',
+    ruleId: 'aether-fraud-session-hijack',
+    severity: 'medium',
+    riskScore: 61,
+    description: 'Impossible travel / geo hop mid-match on session-gateway.',
+    user: 'session-sgw-77af',
+    host: 'aether-session-apac-01',
+    sourceIp: '203.0.113.200',
+    region: 'apac',
+    tactics: [{ id: 'TA0006', name: 'Credential Access' }],
+    techniques: [{ id: 'T1539', name: 'Steal Web Session Cookie' }],
+  },
+];
+
 function gamingFraudAlerts(spaces) {
-  const base = [
-    {
-      ruleName: 'Aether — Credential stuffing on account platform',
-      ruleId: 'aether-fraud-credential-stuffing',
-      severity: 'critical',
-      riskScore: 99,
-      description: 'Auth failure spike correlated with known bad IP ranges during launch window.',
-      user: 'aether-user-88421',
-      sourceIp: '203.0.113.44',
-      region: 'us-west',
-      tactics: [{ id: 'TA0006', name: 'Credential Access' }],
-      techniques: [{ id: 'T1110.004', name: 'Credential Stuffing' }],
+  return FRAUD_CASES.map((a) => buildAlert({ ...a, spaces }));
+}
+
+function gamingRiskDocs() {
+  const docs = [];
+  for (const c of FRAUD_CASES) {
+    docs.push(buildRiskDoc({ entityType: 'user', name: c.user, score: c.riskScore, alertCount: 1 }));
+    docs.push(buildRiskDoc({ entityType: 'host', name: c.host, score: Math.max(40, c.riskScore - 8), alertCount: 1 }));
+  }
+  return docs;
+}
+
+async function bulkIndex(esUrl, apiKey, index, docs) {
+  const ndjson = docs
+    .flatMap((doc) => [JSON.stringify({ create: { _index: index } }), JSON.stringify(doc)])
+    .join('\n')
+    .concat('\n');
+  const upstream = await fetch(`${esUrl}/_bulk?refresh=wait_for`, {
+    method: 'POST',
+    headers: {
+      Authorization: `ApiKey ${apiKey}`,
+      'Content-Type': 'application/x-ndjson',
     },
-    {
-      ruleName: 'Aether — Multi-account abuse (shared device)',
-      ruleId: 'aether-fraud-multi-account',
-      severity: 'high',
-      riskScore: 84,
-      description: '12 new accounts created from shared device fingerprint within 18 minutes.',
-      user: 'device-fp-9c2a',
-      sourceIp: '198.51.100.17',
-      region: 'eu-west',
-      tactics: [{ id: 'TA0001', name: 'Initial Access' }],
-      techniques: [{ id: 'T1078', name: 'Valid Accounts' }],
-    },
-    {
-      ruleName: 'Aether — Payment fraud (stolen instrument)',
-      ruleId: 'aether-fraud-payment',
-      severity: 'high',
-      riskScore: 88,
-      description: 'Checkout velocity anomaly on digital storefront — stolen payment instrument pattern.',
-      user: 'buyer-tok-stub',
-      sourceIp: '192.0.2.91',
-      region: 'us-east',
-      tactics: [{ id: 'TA0040', name: 'Impact' }],
-      techniques: [{ id: 'T1496', name: 'Resource Hijacking' }],
-    },
-    {
-      ruleName: 'Aether — Session hijack candidate',
-      ruleId: 'aether-fraud-session-hijack',
-      severity: 'medium',
-      riskScore: 61,
-      description: 'Impossible travel / geo hop mid-match on session-gateway.',
-      user: 'session-sgw-77af',
-      sourceIp: '203.0.113.200',
-      region: 'apac',
-      tactics: [{ id: 'TA0006', name: 'Credential Access' }],
-      techniques: [{ id: 'T1539', name: 'Steal Web Session Cookie' }],
-    },
-  ];
-  return base.map((a) => buildAlert({ ...a, spaces }));
+    body: ndjson,
+  });
+  const body = await upstream.json().catch(() => ({}));
+  let indexed = 0;
+  let errors = 0;
+  const firstError = [];
+  for (const item of body.items || []) {
+    const op = item.create || item.index;
+    if (op?.error) {
+      errors += 1;
+      if (firstError.length < 2) {
+        firstError.push({ type: op.error.type, reason: op.error.reason });
+      }
+    } else indexed += 1;
+  }
+  return { ok: upstream.ok, status: upstream.status, indexed, errors, firstError, body };
+}
+
+async function kickRiskEngine(kibana, apiKey, space) {
+  if (!kibana) return { skipped: true, reason: 'no kibana url' };
+  const prefix = `/s/${encodeURIComponent(space)}`;
+  const headers = {
+    Authorization: `ApiKey ${apiKey}`,
+    'kbn-xsrf': 'true',
+    'x-elastic-internal-origin': 'kibana',
+    'Content-Type': 'application/json',
+    'Elastic-Api-Version': '1',
+  };
+  const steps = [];
+  for (const [name, path, version] of [
+    ['init', `${prefix}/internal/risk_score/engine/init`, '1'],
+    ['enable', `${prefix}/internal/risk_score/engine/enable`, '1'],
+    ['schedule_now', `${prefix}/api/risk_score/engine/schedule_now`, '2023-10-31'],
+  ]) {
+    try {
+      const r = await fetch(`${kibana}${path}`, {
+        method: 'POST',
+        headers: { ...headers, 'Elastic-Api-Version': version },
+        body: '{}',
+      });
+      const text = await r.text();
+      steps.push({
+        name,
+        status: r.status,
+        body: text.slice(0, 180),
+      });
+    } catch (err) {
+      steps.push({ name, status: 0, body: err instanceof Error ? err.message : String(err) });
+    }
+  }
+  return { skipped: false, steps };
 }
 
 export default async function handler(req, res) {
@@ -218,7 +331,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { url, apiKey, source, o11yFallbackSet, spaces } = creds();
+  const { url, apiKey, kibana, source, o11yFallbackSet, spaces } = creds();
   const configured = Boolean(url && apiKey);
 
   if (req.method === 'GET') {
@@ -226,11 +339,12 @@ export default async function handler(req, res) {
       configured,
       source,
       host: configured ? url.replace(/^https?:\/\//, '') : null,
+      kibana: kibana || null,
       spaceIds: spaces,
       hint: configured
         ? looksLikeObservability(url)
           ? 'SECURITY_ES_URL looks like the Observability project — point it at my-security-project-ac9463 ES.'
-          : null
+          : 'Open Entity analytics in the Default space after seeding (custom spaces stay empty).'
         : 'Set SECURITY_ES_URL + SECURITY_ES_API_KEY on Vercel for the Security Serverless project, then redeploy. Do not use ES_URL (O11Y).',
       o11yFallbackWouldHaveBeenUsed: !configured && o11yFallbackSet,
     });
@@ -259,69 +373,46 @@ export default async function handler(req, res) {
     return;
   }
 
-  const alerts = gamingFraudAlerts(spaces);
-  const ndjson = alerts
-    .flatMap((doc) => [
-      JSON.stringify({ create: { _index: '.alerts-security.alerts-default' } }),
-      JSON.stringify(doc),
-    ])
-    .join('\n')
-    .concat('\n');
-
   try {
-    const upstream = await fetch(`${url}/_bulk?refresh=wait_for`, {
-      method: 'POST',
-      headers: {
-        Authorization: `ApiKey ${apiKey}`,
-        'Content-Type': 'application/x-ndjson',
-      },
-      body: ndjson,
-    });
-    const body = await upstream.json().catch(() => ({}));
-    if (!upstream.ok) {
+    const alerts = gamingFraudAlerts(spaces);
+    const alertResult = await bulkIndex(url, apiKey, '.alerts-security.alerts-default', alerts);
+    if (!alertResult.indexed) {
       json(res, 502, {
-        error: 'Bulk index failed',
-        status: upstream.status,
-        body: JSON.stringify(body).slice(0, 800),
-      });
-      return;
-    }
-
-    let indexed = 0;
-    let errors = 0;
-    const firstError = [];
-    for (const item of body.items || []) {
-      const op = item.create || item.index;
-      if (op?.error) {
-        errors += 1;
-        if (firstError.length < 2) {
-          firstError.push({
-            type: op.error.type,
-            reason: op.error.reason,
-          });
-        }
-      } else indexed += 1;
-    }
-
-    if (!indexed) {
-      json(res, 502, {
-        error: firstError[0]?.reason || 'Failed to index alerts into .alerts-security.alerts-default',
+        error: alertResult.firstError[0]?.reason || 'Failed to index alerts',
         indexed: 0,
-        errors,
-        firstError,
-        hint: 'API key needs write access to Security alert indices. Confirm SECURITY_ES_URL is the Security project.',
+        errors: alertResult.errors,
+        firstError: alertResult.firstError,
       });
       return;
     }
+
+    // Best-effort: seed entity risk docs (Entity analytics reads risk-score.*).
+    const riskDocs = gamingRiskDocs();
+    const riskResults = [];
+    for (const space of spaces) {
+      const index = `risk-score.risk-score-${space}`;
+      const rr = await bulkIndex(url, apiKey, index, riskDocs);
+      riskResults.push({ space, index, indexed: rr.indexed, errors: rr.errors, firstError: rr.firstError });
+    }
+
+    // Best-effort: init/enable/run risk engine in each space.
+    const engine = [];
+    for (const space of spaces) {
+      engine.push({ space, ...(await kickRiskEngine(kibana, apiKey, space)) });
+    }
+
+    const riskIndexed = riskResults.reduce((n, r) => n + r.indexed, 0);
 
     json(res, 200, {
       ok: true,
-      indexed,
-      errors,
-      firstError: firstError.length ? firstError : undefined,
+      indexed: alertResult.indexed,
+      riskIndexed,
+      riskResults,
+      engine,
       spaceIds: spaces,
-      message: `Seeded ${indexed} Aether fraud alerts into Security (spaces: ${spaces.join(', ')}).`,
-      open: 'Open Security → Alerts in the Default space (or your SECURITY_SPACE_IDS). Clear filters; set time to Today/Last 24h. Attack Discovery needs an LLM connector + Run after alerts exist.',
+      message: `Seeded ${alertResult.indexed} alerts and ${riskIndexed} entity risk scores (spaces: ${spaces.join(', ')}).`,
+      open:
+        'Use Default space → Entity analytics (not “Security - psimkins”). Deep link: /s/default/app/security/entity_analytics. Alerts: /s/default/app/security/alerts.',
     });
   } catch (err) {
     json(res, 500, { error: err instanceof Error ? err.message : String(err) });
