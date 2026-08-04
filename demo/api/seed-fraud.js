@@ -425,10 +425,10 @@ export default async function handler(req, res) {
       riskResults.push({ space, index, indexed: rr.indexed, errors: rr.errors, firstError: rr.firstError });
     }
 
-    // Best-effort: init/enable/run risk engine in each space.
+    // Best-effort: enable Entity Store V2 + upsert entities in each space.
     const engine = [];
     for (const space of spaces) {
-      engine.push({ space, ...(await kickRiskEngine(kibana, apiKey, space)) });
+      engine.push({ space, ...(await kickEntityStore(kibana, apiKey, space)) });
     }
 
     const riskIndexed = riskResults.reduce((n, r) => n + r.indexed, 0);
