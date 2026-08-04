@@ -109,7 +109,7 @@ export function FraudLab() {
       <ModuleHeader
         eyebrow="Account fraud"
         title="Investigate gaming fraud signals"
-        subtitle="Triage simulated alerts here, then Seed live Security alerts. Open Alerts and Entity analytics in the Default space (custom spaces like “Security - psimkins” stay empty). Attack Discovery needs an LLM connector after Alerts populate."
+        subtitle="Triage simulated alerts here, then Seed live Security alerts. Open Alerts / Attacks / Entity analytics in the Default space (not “Security - psimkins”). Attacks needs an LLM connector, then Run from Detections → Views → Attacks."
         actions={
           <PrimaryCta onClick={seedLiveFraud} disabled={seeding}>
             {seeding ? 'Seeding…' : 'Seed live Security alerts'}
@@ -122,7 +122,7 @@ export function FraudLab() {
             { href: kibanaSecurityUrl('alerts'), label: 'Alerts', primary: true },
             { href: kibanaSecurityUrl('cases'), label: 'Cases' },
             { href: kibanaSecurityUrl('entityAnalytics'), label: 'Entity analytics' },
-            { href: kibanaSecurityUrl('attackDiscovery'), label: 'Attack discovery' },
+            { href: kibanaSecurityUrl('attacks'), label: 'Attacks' },
           ]}
         />
       </ModuleHeader>

@@ -169,7 +169,9 @@ export function kibanaSecurityUrl(section = 'alerts') {
     rules: '/app/security/rules',
     overview: '/app/security/overview',
     entityAnalytics: '/app/security/entity_analytics',
-    attackDiscovery: '/app/security/attack_discovery',
+    // Attack Discovery moved under Detections → Views → Attacks
+    attackDiscovery: '/app/security/attacks',
+    attacks: '/app/security/attacks',
   };
   return `${base}${prefix}${paths[section] || paths.alerts}`;
 }

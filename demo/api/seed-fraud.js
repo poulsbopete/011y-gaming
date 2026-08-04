@@ -442,7 +442,7 @@ export default async function handler(req, res) {
       spaceIds: spaces,
       message: `Seeded ${alertResult.indexed} alerts and ${riskIndexed} entity risk scores (spaces: ${spaces.join(', ')}).`,
       open:
-        'Use Default space → Entity analytics (not “Security - psimkins”). Deep link: /s/default/app/security/entity_analytics. Alerts: /s/default/app/security/alerts.',
+        'Use Default space → Detections → Views → Attacks (not the old Attack discovery nav item). Alerts: /s/default/app/security/alerts. Entity analytics: /s/default/app/security/entity_analytics. Attacks needs an LLM connector + Run.',
     });
   } catch (err) {
     json(res, 500, { error: err instanceof Error ? err.message : String(err) });

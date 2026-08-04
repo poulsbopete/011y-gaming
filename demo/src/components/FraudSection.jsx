@@ -16,7 +16,7 @@ export function FraudSection() {
     { label: 'Cases', href: kibanaSecurityUrl('cases') },
     { label: 'Detection rules', href: kibanaSecurityUrl('rules') },
     { label: 'Entity analytics', href: kibanaSecurityUrl('entityAnalytics') },
-    { label: 'Attack discovery', href: kibanaSecurityUrl('attackDiscovery') },
+    { label: 'Attacks', href: kibanaSecurityUrl('attacks') },
   ];
 
   return (
