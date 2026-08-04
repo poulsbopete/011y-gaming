@@ -292,25 +292,37 @@ def seed_docs(docs: list[dict]) -> None:
         print(f"  ✓ indexed {len(docs)} docs → {INDEX}")
 
 
-def _md(content: str, *, y: int, h: int = 5) -> dict:
-    # Serverless Dashboards API (Elastic-Api-Version 2023-10-31): type markdown
+
+def _md(content: str, *, y: int, h: int = 5, title: str = " ") -> dict:
     return {
         "type": "markdown",
         "grid": {"x": 0, "y": y, "w": 48, "h": h},
-        "config": {"content": content},
+        "config": {"content": content, "title": title},
     }
 
 
-def _metric(title: str, query: str, col: str, *, x: int, y: int, w: int = 12) -> dict:
-    # vis + config.title + data_source.esql (not lens / dataset)
+def _metric(title: str, query: str, col: str, *, x: int, y: int, w: int = 12, h: int = 7) -> dict:
     return {
         "type": "vis",
-        "grid": {"x": x, "y": y, "w": w, "h": 7},
+        "grid": {"x": x, "y": y, "w": w, "h": h},
         "config": {
             "title": title,
             "type": "metric",
             "data_source": {"type": "esql", "query": query},
             "metrics": [{"type": "primary", "column": col}],
+        },
+    }
+
+
+def _gauge(title: str, query: str, col: str, *, x: int, y: int, w: int = 12, h: int = 8) -> dict:
+    return {
+        "type": "vis",
+        "grid": {"x": x, "y": y, "w": w, "h": h},
+        "config": {
+            "title": title,
+            "type": "gauge",
+            "data_source": {"type": "esql", "query": query},
+            "metric": {"column": col},
         },
     }
 
@@ -322,27 +334,59 @@ def _xy(
     x_col: str,
     y_col: str,
     layer: str = "bar",
+    breakdown: str | None = None,
     x: int,
     y: int,
     w: int = 24,
     h: int = 12,
 ) -> dict:
+    layer_cfg: dict = {
+        "type": layer,
+        "data_source": {"type": "esql", "query": query},
+        "x": {"column": x_col},
+        "y": [{"column": y_col}],
+    }
+    if breakdown:
+        layer_cfg["breakdown_by"] = {"column": breakdown}
     return {
         "type": "vis",
         "grid": {"x": x, "y": y, "w": w, "h": h},
+        "config": {"title": title, "type": "xy", "layers": [layer_cfg]},
+    }
+
+
+def _log_detail(title: str, esql: str, *, y: int, h: int = 16) -> dict:
+    """ES|QL field-stats log detail (Serverless Dashboards API)."""
+    return {
+        "type": "field_stats_table",
+        "grid": {"x": 0, "y": y, "w": 48, "h": h},
         "config": {
             "title": title,
-            "type": "xy",
-            "layers": [
-                {
-                    "type": layer,
-                    "data_source": {"type": "esql", "query": query},
-                    "x": {"column": x_col},
-                    "y": [{"column": y_col}],
-                }
-            ],
+            "view_type": "esql",
+            "query": {"esql": esql},
+            "show_distributions": True,
         },
     }
+
+
+def fetch_recent_log_lines(limit: int = 12) -> list[str]:
+    q = (
+        f'FROM {INDEX} | WHERE labels.source == "loki_a2a_stub" AND event.action == "login_failed" '
+        f"| SORT @timestamp DESC | KEEP @timestamp, source.ip, user.name, event.reason, message | LIMIT {limit}"
+    )
+    payload, code = http("POST", f"{ES_URL}/_query", {"query": q})
+    if code != 200 or not isinstance(payload, dict):
+        return []
+    cols = [c.get("name") for c in (payload.get("columns") or [])]
+    lines = []
+    for row in payload.get("values") or []:
+        d = dict(zip(cols, row))
+        ts = str(d.get("@timestamp") or "")[:19]
+        lines.append(
+            f"{ts}  {d.get('source.ip', '—')}  user={d.get('user.name', '—')}  "
+            f"reason={d.get('event.reason', '—')}  | {d.get('message', '')}"
+        )
+    return lines
 
 
 def ensure_data_view() -> None:
@@ -367,11 +411,7 @@ def ensure_data_view() -> None:
 
 
 def create_dashboard(dash_id: str, title: str, description: str, panels: list) -> None:
-    body = {
-        "title": title[:255],
-        "description": description,
-        "panels": panels,
-    }
+    body = {"title": title[:255], "description": description, "panels": panels}
     payload, code = http(
         "PUT",
         f"{KIBANA_URL}/api/dashboards/{dash_id}",
@@ -397,137 +437,149 @@ def dashboards() -> None:
     ensure_data_view()
     idx = INDEX
     src = 'labels.source == "loki_a2a_stub"'
-    md = (
-        "**Stub data** — shaped like Loki LogQL hits from the Aether A2A workflow "
-        "(`aether-loki-a2a-stub`). Indexed into **`aether-loki-stub-logs`** so Kibana can "
-        "show launch-window log context without a live Loki.\n\n"
-        "Production: swap the workflow HTTP step to real `/loki/api/v1/query_range`, "
-        "then migrate hot streams here."
-    )
-    canned_auth = (
-        "### Canned LogQL hits (from workflow stub)\n\n"
-        "```\n"
-        "203.0.113.44 auth login_failed user=aether-user-88421 reason=bad_password\n"
-        "203.0.113.44 auth login_failed user=aether-user-99102 reason=bad_password\n"
-        "203.0.113.44 auth login_failed user=aether-user-12044 reason=mfa_timeout\n"
-        "```"
-    )
-    canned_launch = (
-        "### Canned LogQL hits (from workflow stub)\n\n"
-        "```\n"
-        "203.0.113.44 auth login_failed user=aether-user-88421 reason=bad_password\n"
-        "198.51.100.17 gateway rate_limit_exceeded route=/v1/login studio=aether\n"
-        "anticheat signal severity=high player=aether-user-88421 device=fp-9c2a\n"
-        "```"
-    )
+    auth = f'{src} AND event.action == "login_failed"'
+    recent = fetch_recent_log_lines(14)
+    recent_block = "\n".join(recent) if recent else "(no rows — re-run seed)"
+
+    intro_auth = f"""# Loki → Kibana · auth login failures
+
+**A2A coexistence stub** — LogQL-shaped hits from `aether-loki-a2a-stub`, indexed so analysts stay in Kibana.
+
+`{{service_name="auth", studio="aether"}} |= "login_failed"` → **`{idx}`**
+"""
+
+    stream_auth = f"""## Live log stream (seeded)
+
+```
+{recent_block}
+```
+
+Hot entities: `203.0.113.44` · `aether-user-88421` · reasons `bad_password` / `mfa_timeout`
+"""
 
     create_dashboard(
         DASH_AUTH_ID,
         "Aether — Loki stub · Auth login failures",
-        "Canned Loki-shaped auth login_failed logs (A2A stub) visualized in Kibana",
+        "Loki-shaped auth login_failed logs with metrics, timeline, and log detail (A2A stub)",
         [
-            _md(
-                md + '\n\nLogQL stub: `{service_name="auth", studio="aether"} |= "login_failed"`',
-                y=0,
-                h=6,
-            ),
+            _md(intro_auth, y=0, h=5, title="Overview"),
             _metric(
                 "Login failures",
-                f'FROM {idx} | WHERE {src} AND event.action == "login_failed" | STATS failures = COUNT(*)',
+                f"FROM {idx} | WHERE {auth} | STATS failures = COUNT(*)",
                 "failures",
-                x=0,
-                y=6,
+                x=0, y=5, w=9,
             ),
             _metric(
                 "Distinct users",
-                f'FROM {idx} | WHERE {src} AND event.action == "login_failed" | STATS users = COUNT_DISTINCT(user.name)',
+                f"FROM {idx} | WHERE {auth} | STATS users = COUNT_DISTINCT(user.name)",
                 "users",
-                x=12,
-                y=6,
+                x=9, y=5, w=9,
             ),
             _metric(
-                "Hits from 203.0.113.44",
+                "Attacker IP hits",
                 f'FROM {idx} | WHERE {src} AND source.ip == "203.0.113.44" | STATS hits = COUNT(*)',
                 "hits",
-                x=24,
-                y=6,
+                x=18, y=5, w=9,
             ),
             _metric(
-                "Distinct reasons",
-                f'FROM {idx} | WHERE {src} AND event.action == "login_failed" | STATS n = COUNT_DISTINCT(event.reason)',
+                "bad_password",
+                f'FROM {idx} | WHERE {auth} AND event.reason == "bad_password" | STATS n = COUNT(*)',
                 "n",
-                x=36,
-                y=6,
+                x=27, y=5, w=9,
+            ),
+            _gauge(
+                "Failure volume",
+                f"FROM {idx} | WHERE {auth} | STATS failures = COUNT(*)",
+                "failures",
+                x=36, y=5, w=12, h=7,
             ),
             _xy(
-                "Login failures over time",
-                f'FROM {idx} | WHERE {src} AND event.action == "login_failed" '
-                "| STATS failures = COUNT(*) BY bucket = BUCKET(@timestamp, 30 minutes) | SORT bucket",
+                "Failures over time by reason",
+                f"FROM {idx} | WHERE {auth} "
+                "| STATS failures = COUNT(*) BY bucket = BUCKET(@timestamp, 30 minutes), event.reason | SORT bucket",
                 x_col="bucket",
                 y_col="failures",
-                layer="bar",
-                x=0,
-                y=13,
-                w=28,
+                layer="area_stacked",
+                breakdown="event.reason",
+                x=0, y=12, w=30, h=14,
             ),
             _xy(
-                "Failures by reason",
-                f'FROM {idx} | WHERE {src} AND event.action == "login_failed" '
-                "| STATS failures = COUNT(*) BY event.reason | SORT failures DESC",
+                "Top failing users",
+                f"FROM {idx} | WHERE {auth} | STATS failures = COUNT(*) BY user.name | SORT failures DESC | LIMIT 8",
+                x_col="user.name",
+                y_col="failures",
+                layer="bar_horizontal",
+                x=30, y=12, w=18, h=14,
+            ),
+            _xy(
+                "Source IPs",
+                f"FROM {idx} | WHERE {auth} | STATS failures = COUNT(*) BY source.ip | SORT failures DESC | LIMIT 8",
+                x_col="source.ip",
+                y_col="failures",
+                layer="bar",
+                x=0, y=26, w=24, h=12,
+            ),
+            _xy(
+                "Failure reasons",
+                f"FROM {idx} | WHERE {auth} | STATS failures = COUNT(*) BY event.reason | SORT failures DESC",
                 x_col="event.reason",
                 y_col="failures",
                 layer="bar_horizontal",
-                x=28,
-                y=13,
-                w=20,
+                x=24, y=26, w=24, h=12,
             ),
-            _md(canned_auth, y=25, h=8),
+            _log_detail(
+                "Log detail — auth login_failed (Loki stub)",
+                f"FROM {idx} | WHERE {auth} | SORT @timestamp DESC "
+                "| KEEP @timestamp, source.ip, user.name, event.reason, message | LIMIT 50",
+                y=38, h=18,
+            ),
+            _md(stream_auth, y=56, h=12, title="Log stream"),
         ],
     )
+
+    intro_launch = f"""# Loki → Kibana · launch window
+
+Auth + gateway rate limits + anticheat — same A2A stub corpus as the workflow.
+
+Entities: `203.0.113.44` · `aether-user-88421` · gateway `198.51.100.17` · device `fp-9c2a`
+"""
 
     create_dashboard(
         DASH_LAUNCH_ID,
         "Aether — Loki stub · Launch window (auth + gateway + anticheat)",
-        "Full canned Loki A2A stub corpus — auth, gateway rate limits, anticheat signals",
+        "Full Loki A2A stub corpus with service breakdown and log detail",
         [
-            _md(
-                md
-                + "\n\nEntities from the workflow stub: `203.0.113.44`, `aether-user-88421`, "
-                "gateway `198.51.100.17`, anticheat device `fp-9c2a`.",
-                y=0,
-                h=6,
-            ),
+            _md(intro_launch, y=0, h=5, title="Overview"),
             _metric(
                 "Stub log lines",
                 f"FROM {idx} | WHERE {src} | STATS lines = COUNT(*)",
                 "lines",
-                x=0,
-                y=6,
-                w=16,
+                x=0, y=5, w=12,
+            ),
+            _metric(
+                "Auth failures",
+                f"FROM {idx} | WHERE {auth} | STATS n = COUNT(*)",
+                "n",
+                x=12, y=5, w=12,
             ),
             _metric(
                 "Anticheat signals",
                 f'FROM {idx} | WHERE {src} AND event.action == "anticheat_signal" | STATS n = COUNT(*)',
                 "n",
-                x=16,
-                y=6,
-                w=16,
+                x=24, y=5, w=12,
             ),
-            _metric(
+            _gauge(
                 "Gateway rate limits",
                 f'FROM {idx} | WHERE {src} AND event.action == "rate_limit_exceeded" | STATS n = COUNT(*)',
                 "n",
-                x=32,
-                y=6,
-                w=16,
+                x=36, y=5, w=12, h=7,
             ),
             _xy(
-                "Volume by service (Loki stub)",
+                "Volume by service",
                 f"FROM {idx} | WHERE {src} | STATS lines = COUNT(*) BY service.name | SORT lines DESC",
                 x_col="service.name",
                 y_col="lines",
-                x=0,
-                y=13,
+                x=0, y=12, w=24, h=12,
             ),
             _xy(
                 "By event.action",
@@ -535,10 +587,32 @@ def dashboards() -> None:
                 x_col="event.action",
                 y_col="lines",
                 layer="bar_horizontal",
-                x=24,
-                y=13,
+                x=24, y=12, w=24, h=12,
             ),
-            _md(canned_launch, y=25, h=8),
+            _xy(
+                "Launch window timeline",
+                f"FROM {idx} | WHERE {src} "
+                "| STATS lines = COUNT(*) BY bucket = BUCKET(@timestamp, 30 minutes), event.action | SORT bucket",
+                x_col="bucket",
+                y_col="lines",
+                layer="area_stacked",
+                breakdown="event.action",
+                x=0, y=24, w=48, h=14,
+            ),
+            _log_detail(
+                "Log detail — launch window (all stub actions)",
+                f"FROM {idx} | WHERE {src} | SORT @timestamp DESC "
+                "| KEEP @timestamp, service.name, event.action, source.ip, user.name, message | LIMIT 50",
+                y=38, h=18,
+            ),
+            _md(
+                "## Workflow stub lines\n\n```\n"
+                "203.0.113.44 auth login_failed user=aether-user-88421 reason=bad_password\n"
+                "198.51.100.17 gateway rate_limit_exceeded route=/v1/login studio=aether\n"
+                "anticheat signal severity=high player=aether-user-88421 device=fp-9c2a\n"
+                "```\n",
+                y=56, h=8, title="Stub lines",
+            ),
         ],
     )
 
