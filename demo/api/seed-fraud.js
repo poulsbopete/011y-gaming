@@ -285,7 +285,7 @@ async function bulkIndex(esUrl, apiKey, index, docs) {
   return { ok: upstream.ok, status: upstream.status, indexed, errors, firstError, body };
 }
 
-async function kickRiskEngine(kibana, apiKey, space) {
+async function kickEntityStore(kibana, apiKey, space) {
   if (!kibana) return { skipped: true, reason: 'no kibana url' };
   const prefix = `/s/${encodeURIComponent(space)}`;
   const headers = {
@@ -293,30 +293,60 @@ async function kickRiskEngine(kibana, apiKey, space) {
     'kbn-xsrf': 'true',
     'x-elastic-internal-origin': 'kibana',
     'Content-Type': 'application/json',
-    'Elastic-Api-Version': '1',
+    'Elastic-Api-Version': '2023-10-31',
   };
   const steps = [];
-  for (const [name, path, version] of [
-    ['init', `${prefix}/internal/risk_score/engine/init`, '1'],
-    ['enable', `${prefix}/internal/risk_score/engine/enable`, '1'],
-    ['schedule_now', `${prefix}/api/risk_score/engine/schedule_now`, '2023-10-31'],
-  ]) {
+
+  async function call(name, method, path, body) {
     try {
       const r = await fetch(`${kibana}${path}`, {
-        method: 'POST',
-        headers: { ...headers, 'Elastic-Api-Version': version },
-        body: '{}',
+        method,
+        headers,
+        body: body === undefined ? undefined : JSON.stringify(body),
       });
       const text = await r.text();
-      steps.push({
-        name,
-        status: r.status,
-        body: text.slice(0, 180),
-      });
+      steps.push({ name, status: r.status, body: text.slice(0, 220) });
     } catch (err) {
       steps.push({ name, status: 0, body: err instanceof Error ? err.message : String(err) });
     }
   }
+
+  // Entity Store V2 (legacy /internal/risk_score/engine/* returns 400 on this project).
+  await call('enable_store', 'POST', `${prefix}/api/entity_store/enable`, {
+    entityTypes: ['user', 'host'],
+  });
+  for (const entityType of ['user', 'host']) {
+    await call('init_engine', 'POST', `${prefix}/api/entity_store/engines/${entityType}/init`, {});
+    await call('start_engine', 'POST', `${prefix}/api/entity_store/engines/${entityType}/start`, {});
+  }
+  await call('start_store', 'PUT', `${prefix}/api/security/entity_store/start`, {
+    entityTypes: ['user', 'host'],
+  });
+
+  const entities = FRAUD_CASES.flatMap((c) => [
+    {
+      type: 'user',
+      id: c.user,
+      attributes: {
+        '@timestamp': new Date().toISOString(),
+        user: { name: c.user },
+        entity: { name: c.user, type: 'user' },
+      },
+    },
+    {
+      type: 'host',
+      id: c.host,
+      attributes: {
+        '@timestamp': new Date().toISOString(),
+        host: { name: c.host },
+        entity: { name: c.host, type: 'host' },
+      },
+    },
+  ]);
+  await call('upsert_entities', 'PUT', `${prefix}/api/entity_store/entities/bulk?force=true`, {
+    entities,
+  });
+
   return { skipped: false, steps };
 }
 
