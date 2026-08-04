@@ -3,12 +3,15 @@
  * Indexes synthetic documents into .alerts-security.alerts-default.
  *
  * Server-only env (never VITE_*):
- *   SECURITY_ES_URL  — Security project ES URL (preferred)
- *   SECURITY_ES_API_KEY
- * Falls back to ES_URL / ES_API_KEY only if SECURITY_* unset (same project).
+ *   SECURITY_ES_URL      — Security project ES URL (required)
+ *   SECURITY_ES_API_KEY  — API key with write to alert indices (required)
+ *   SECURITY_SPACE_IDS   — comma-separated Kibana space ids (default: default)
+ *
+ * Do NOT fall back to ES_URL / ES_API_KEY (those point at Observability and
+ * reject .alerts-security.* writes).
  *
  * POST /api/seed-fraud
- * GET  /api/seed-fraud → { configured }
+ * GET  /api/seed-fraud → { configured, host, spaceIds }
  */
 import { randomUUID } from 'node:crypto';
 
@@ -19,15 +22,31 @@ function json(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+function spaceIds() {
+  const raw = (process.env.SECURITY_SPACE_IDS || 'default').trim();
+  const ids = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return ids.length ? ids : ['default'];
+}
+
 function creds() {
-  const url = (process.env.SECURITY_ES_URL || process.env.ES_URL || '').trim().replace(/\/$/, '');
-  const apiKey = (process.env.SECURITY_ES_API_KEY || process.env.ES_API_KEY || '').trim();
-  const source = process.env.SECURITY_ES_URL
-    ? 'SECURITY_ES_URL'
-    : process.env.ES_URL
-      ? 'ES_URL (fallback — prefer SECURITY_* for the Security project)'
-      : null;
-  return { url, apiKey, source };
+  const url = (process.env.SECURITY_ES_URL || '').trim().replace(/\/$/, '');
+  const apiKey = (process.env.SECURITY_ES_API_KEY || '').trim();
+  const o11yFallbackSet = Boolean(process.env.ES_URL || process.env.ES_API_KEY);
+  return {
+    url,
+    apiKey,
+    source: url ? 'SECURITY_ES_URL' : null,
+    o11yFallbackSet,
+    spaces: spaceIds(),
+  };
+}
+
+function looksLikeObservability(url) {
+  const host = url.replace(/^https?:\/\//, '').toLowerCase();
+  return host.includes('otel-demo') || host.startsWith('otel-');
 }
 
 function buildAlert({
@@ -41,6 +60,7 @@ function buildAlert({
   region,
   tactics = [],
   techniques = [],
+  spaces,
 }) {
   const now = new Date().toISOString();
   const docId = randomUUID();
@@ -126,16 +146,16 @@ function buildAlert({
           },
         ],
       },
-      space_ids: ['default'],
+      space_ids: spaces,
       version: '8.15.0',
     },
     ...(threat.length ? { threat } : {}),
   };
 }
 
-function gamingFraudAlerts() {
-  return [
-    buildAlert({
+function gamingFraudAlerts(spaces) {
+  const base = [
+    {
       ruleName: 'Aether — Credential stuffing on account platform',
       ruleId: 'aether-fraud-credential-stuffing',
       severity: 'critical',
@@ -146,8 +166,8 @@ function gamingFraudAlerts() {
       region: 'us-west',
       tactics: [{ id: 'TA0006', name: 'Credential Access' }],
       techniques: [{ id: 'T1110.004', name: 'Credential Stuffing' }],
-    }),
-    buildAlert({
+    },
+    {
       ruleName: 'Aether — Multi-account abuse (shared device)',
       ruleId: 'aether-fraud-multi-account',
       severity: 'high',
@@ -158,8 +178,8 @@ function gamingFraudAlerts() {
       region: 'eu-west',
       tactics: [{ id: 'TA0001', name: 'Initial Access' }],
       techniques: [{ id: 'T1078', name: 'Valid Accounts' }],
-    }),
-    buildAlert({
+    },
+    {
       ruleName: 'Aether — Payment fraud (stolen instrument)',
       ruleId: 'aether-fraud-payment',
       severity: 'high',
@@ -170,8 +190,8 @@ function gamingFraudAlerts() {
       region: 'us-east',
       tactics: [{ id: 'TA0040', name: 'Impact' }],
       techniques: [{ id: 'T1496', name: 'Resource Hijacking' }],
-    }),
-    buildAlert({
+    },
+    {
       ruleName: 'Aether — Session hijack candidate',
       ruleId: 'aether-fraud-session-hijack',
       severity: 'medium',
@@ -182,8 +202,9 @@ function gamingFraudAlerts() {
       region: 'apac',
       tactics: [{ id: 'TA0006', name: 'Credential Access' }],
       techniques: [{ id: 'T1539', name: 'Steal Web Session Cookie' }],
-    }),
+    },
   ];
+  return base.map((a) => buildAlert({ ...a, spaces }));
 }
 
 export default async function handler(req, res) {
@@ -197,7 +218,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { url, apiKey, source } = creds();
+  const { url, apiKey, source, o11yFallbackSet, spaces } = creds();
   const configured = Boolean(url && apiKey);
 
   if (req.method === 'GET') {
@@ -205,9 +226,13 @@ export default async function handler(req, res) {
       configured,
       source,
       host: configured ? url.replace(/^https?:\/\//, '') : null,
+      spaceIds: spaces,
       hint: configured
-        ? null
-        : 'Set SECURITY_ES_URL + SECURITY_ES_API_KEY on Vercel (Security project), then redeploy.',
+        ? looksLikeObservability(url)
+          ? 'SECURITY_ES_URL looks like the Observability project — point it at my-security-project-ac9463 ES.'
+          : null
+        : 'Set SECURITY_ES_URL + SECURITY_ES_API_KEY on Vercel for the Security Serverless project, then redeploy. Do not use ES_URL (O11Y).',
+      o11yFallbackWouldHaveBeenUsed: !configured && o11yFallbackSet,
     });
     return;
   }
@@ -220,12 +245,21 @@ export default async function handler(req, res) {
   if (!configured) {
     json(res, 503, {
       error:
-        'SECURITY_ES_URL and SECURITY_ES_API_KEY are not set (server-only). Add them for the Security Serverless project and redeploy.',
+        'SECURITY_ES_URL and SECURITY_ES_API_KEY are not set on Vercel. Add them for my-security-project-ac9463 (not the Observability ES_URL), then redeploy.',
+      hint: 'Vercel → Project → Settings → Environment Variables → Production',
     });
     return;
   }
 
-  const alerts = gamingFraudAlerts();
+  if (looksLikeObservability(url)) {
+    json(res, 503, {
+      error:
+        'SECURITY_ES_URL points at the Observability project. Fraud alerts must go to the Security project ES endpoint (my-security-project-ac9463.es…).',
+    });
+    return;
+  }
+
+  const alerts = gamingFraudAlerts(spaces);
   const ndjson = alerts
     .flatMap((doc) => [
       JSON.stringify({ create: { _index: '.alerts-security.alerts-default' } }),
@@ -260,17 +294,34 @@ export default async function handler(req, res) {
       const op = item.create || item.index;
       if (op?.error) {
         errors += 1;
-        if (firstError.length < 2) firstError.push(op.error);
+        if (firstError.length < 2) {
+          firstError.push({
+            type: op.error.type,
+            reason: op.error.reason,
+          });
+        }
       } else indexed += 1;
     }
 
-    json(res, errors && !indexed ? 502 : 200, {
-      ok: indexed > 0,
+    if (!indexed) {
+      json(res, 502, {
+        error: firstError[0]?.reason || 'Failed to index alerts into .alerts-security.alerts-default',
+        indexed: 0,
+        errors,
+        firstError,
+        hint: 'API key needs write access to Security alert indices. Confirm SECURITY_ES_URL is the Security project.',
+      });
+      return;
+    }
+
+    json(res, 200, {
+      ok: true,
       indexed,
       errors,
       firstError: firstError.length ? firstError : undefined,
-      message: `Seeded ${indexed} Aether fraud alerts into Security.`,
-      open: 'Security → Alerts (filter tag: Aether Games). Attack Discovery needs an LLM connector + Run after alerts exist.',
+      spaceIds: spaces,
+      message: `Seeded ${indexed} Aether fraud alerts into Security (spaces: ${spaces.join(', ')}).`,
+      open: 'Open Security → Alerts in the Default space (or your SECURITY_SPACE_IDS). Clear filters; set time to Today/Last 24h. Attack Discovery needs an LLM connector + Run after alerts exist.',
     });
   } catch (err) {
     json(res, 500, { error: err instanceof Error ? err.message : String(err) });

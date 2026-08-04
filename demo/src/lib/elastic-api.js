@@ -159,6 +159,10 @@ export function kibanaRulesUrl(kibanaBase) {
 
 export function kibanaSecurityUrl(section = 'alerts') {
   const base = getSecurityKibanaUrl();
+  // Force Default space — custom spaces (e.g. "Security - psimkins") won't show
+  // alerts seeded with kibana.space_ids: ["default"].
+  const space = (import.meta.env.VITE_SECURITY_SPACE_ID || 'default').trim() || 'default';
+  const prefix = space === 'default' ? '' : `/s/${encodeURIComponent(space)}`;
   const paths = {
     alerts: '/app/security/alerts',
     cases: '/app/security/cases',
@@ -167,7 +171,7 @@ export function kibanaSecurityUrl(section = 'alerts') {
     entityAnalytics: '/app/security/explore/users',
     attackDiscovery: '/app/security/attack_discovery',
   };
-  return `${base}${paths[section] || paths.alerts}`;
+  return `${base}${prefix}${paths[section] || paths.alerts}`;
 }
 
 export function getInstruqtInviteUrl() {

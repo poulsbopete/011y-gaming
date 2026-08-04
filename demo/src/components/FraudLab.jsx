@@ -87,8 +87,13 @@ export function FraudLab() {
     try {
       const r = await fetch('/api/seed-fraud', { method: 'POST' });
       const body = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        setSeedMsg(body.error || `Seed failed (${r.status})`);
+      if (!r.ok || body.ok === false) {
+        const detail =
+          body.error ||
+          body.firstError?.[0]?.reason ||
+          body.message ||
+          `Seed failed (${r.status})`;
+        setSeedMsg(body.hint ? `${detail} — ${body.hint}` : detail);
         return;
       }
       setSeedMsg(body.message || 'Seeded fraud alerts.');
@@ -104,7 +109,7 @@ export function FraudLab() {
       <ModuleHeader
         eyebrow="Account fraud"
         title="Investigate gaming fraud signals"
-        subtitle="Triage simulated alerts here, seed live Security alerts, then continue in Kibana. Attack Discovery needs an LLM connector after Alerts populate."
+        subtitle="Triage simulated alerts here, then Seed live Security alerts (needs SECURITY_ES_* on Vercel). Open Alerts in the Default space — custom spaces won't show seeded docs. Attack Discovery needs an LLM connector after Alerts populate."
         actions={
           <PrimaryCta onClick={seedLiveFraud} disabled={seeding}>
             {seeding ? 'Seeding…' : 'Seed live Security alerts'}
