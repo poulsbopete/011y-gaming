@@ -8,7 +8,18 @@ migration — without ripping out Loki on day one.
 | Artifact | Role |
 | --- | --- |
 | `workflows/aether-loki-a2a-stub.yaml` | Runnable Kibana workflow (manual). Console stubs the Loki `query_range` call; Agent Builder writes a brief; Markdown `workshop-aether-loki-a2a-stub`. |
-| Deploy | `python3 scripts/deploy_workshop_workflows.py aether-loki-a2a-stub.yaml` |
+| `scripts/seed_loki_stub_dashboards.py` | Indexes canned LogQL hits into `aether-loki-stub-logs` and creates two Kibana dashboards. |
+| Deploy workflow | `python3 scripts/deploy_workshop_workflows.py aether-loki-a2a-stub.yaml` |
+| Seed + dashboards | `python3 scripts/seed_loki_stub_dashboards.py` |
+
+### Dashboards (live O11Y)
+
+| Dashboard | ID |
+| --- | --- |
+| Aether — Loki stub · Auth login failures | `aether-loki-stub-auth-logs` |
+| Aether — Loki stub · Launch window | `aether-loki-stub-launch-window` |
+
+Open: `{KIBANA_URL}/app/dashboards#/view/<id>`
 
 ## Why stub?
 

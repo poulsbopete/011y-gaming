@@ -100,6 +100,15 @@ export function kibanaDashboardsUrl(kibanaBase) {
   return `${base}/app/dashboards#/list?_g=(time:(from:now-24h,to:now))`;
 }
 
+/** Fixed POV dashboards for Loki A2A stub logs (see scripts/seed_loki_stub_dashboards.py). */
+export function kibanaDashboardViewUrl(kibanaBase, dashboardId) {
+  const base = (kibanaBase || getO11yKibanaUrl()).replace(/\/$/, '');
+  return `${base}/app/dashboards#/view/${dashboardId}?_g=(time:(from:now-24h,to:now))`;
+}
+
+export const LOKI_STUB_DASH_AUTH = 'aether-loki-stub-auth-logs';
+export const LOKI_STUB_DASH_LAUNCH = 'aether-loki-stub-launch-window';
+
 export function kibanaStreamsUrl(kibanaBase) {
   const base = (kibanaBase || getO11yKibanaUrl()).replace(/\/$/, '');
   return `${base}/app/streams`;

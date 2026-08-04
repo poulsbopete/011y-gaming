@@ -103,6 +103,7 @@ Deployed by `scripts/deploy_workshop_workflows.py` (Lab 1 migrate + Lab 2 publis
 | `workflows/aether-dashboard-briefs.yaml` | Per-Aether-dashboard summary + remediation steps |
 | `workflows/aether-ml-anomaly-cps-security.yaml` | ML auth anomalies → Security correlation via CPS |
 | `workflows/aether-loki-a2a-stub.yaml` | Stub: Kibana workflow “calls” Loki LogQL (A2A coexistence) |
+| `scripts/seed_loki_stub_dashboards.py` | Seed stub Loki logs + Auth / Launch-window dashboards |
 
 ML job helper: `scripts/create_aether_ml_anomaly_job.py` — see [`docs/ml-anomaly-cps-security.md`](docs/ml-anomaly-cps-security.md).
 

@@ -4,9 +4,12 @@ import {
   getO11yEsUrl,
   kibanaDiscoverUrl,
   kibanaDashboardsUrl,
+  kibanaDashboardViewUrl,
   kibanaObservabilityServicesUrl,
   kibanaStreamsUrl,
   kibanaRulesUrl,
+  LOKI_STUB_DASH_AUTH,
+  LOKI_STUB_DASH_LAUNCH,
 } from '../lib/elastic-api';
 
 export function ObservabilitySection() {
@@ -15,6 +18,8 @@ export function ObservabilitySection() {
   const links = [
     { label: 'Discover (ES|QL)', href: kibanaDiscoverUrl(kibana) },
     { label: 'Dashboards', href: kibanaDashboardsUrl(kibana) },
+    { label: 'Loki stub · Auth failures', href: kibanaDashboardViewUrl(kibana, LOKI_STUB_DASH_AUTH) },
+    { label: 'Loki stub · Launch window', href: kibanaDashboardViewUrl(kibana, LOKI_STUB_DASH_LAUNCH) },
     { label: 'APM services', href: kibanaObservabilityServicesUrl(kibana) },
     { label: 'Streams', href: kibanaStreamsUrl(kibana) },
     { label: 'Alert rules', href: kibanaRulesUrl(kibana) },
