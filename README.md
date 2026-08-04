@@ -26,6 +26,7 @@ Dual deliverable for gaming platform POV conversations:
 
 ## Instruqt track
 
+**Invite:** https://play.instruqt.com/elastic/invite/6fjbsdobn1wy  
 **Manage:** https://play.instruqt.com/manage/elastic/tracks/aether-games-metrics-adoption
 
 
@@ -82,7 +83,7 @@ Redeploy from repo root (keeps Root Directory = `demo`):
 vercel --prod --scope poulsbopetes-projects
 ```
 
-Env vars: `VITE_KIBANA_URL`, `VITE_ES_URL`, `VITE_SECURITY_KIBANA_URL`, `VITE_SECURITY_ES_URL` (see `demo/.env.example`). Set `VITE_INSTRUQT_INVITE_URL` when the track invite exists.
+Env vars: `VITE_KIBANA_URL`, `VITE_ES_URL`, `VITE_SECURITY_KIBANA_URL`, `VITE_SECURITY_ES_URL` (see `demo/.env.example`). Default Instruqt invite: https://play.instruqt.com/elastic/invite/6fjbsdobn1wy (`VITE_INSTRUQT_INVITE_URL` overrides).
 
 ## Docs
 

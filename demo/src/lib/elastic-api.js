@@ -171,5 +171,8 @@ export function kibanaSecurityUrl(section = 'alerts') {
 }
 
 export function getInstruqtInviteUrl() {
-  return import.meta.env.VITE_INSTRUQT_INVITE_URL || '';
+  return (
+    import.meta.env.VITE_INSTRUQT_INVITE_URL ||
+    'https://play.instruqt.com/elastic/invite/6fjbsdobn1wy'
+  );
 }

@@ -15,9 +15,9 @@ You are invited to a hands-on workshop on adopting **metrics** on Elastic Observ
 
 **Length:** ~90–120 minutes.
 
-**Instruqt track:** https://play.instruqt.com/manage/elastic/tracks/aether-games-metrics-adoption
+**Instruqt invite:** https://play.instruqt.com/elastic/invite/6fjbsdobn1wy
 
-**Invite:** create via Instruqt manage → Invites (paste public invite URL here).
+**Track (manage):** https://play.instruqt.com/manage/elastic/tracks/aether-games-metrics-adoption
 
 **Optional POV demo (fixed projects):** Vercel Aether Games app — Observability + Security deep links.
 

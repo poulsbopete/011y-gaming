@@ -112,10 +112,7 @@ export default function App() {
             </p>
           </div>
           <a
-            href={
-              invite ||
-              'https://play.instruqt.com/manage/elastic/tracks/aether-games-metrics-adoption'
-            }
+            href={invite}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-cyan hover:text-amber transition-colors"
