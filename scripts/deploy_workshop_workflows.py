@@ -46,6 +46,7 @@ DEFAULT_FILES = (
     "metrics-adoption-recommendations.yaml",
     "aether-dashboard-briefs.yaml",
     "aether-ml-anomaly-cps-security.yaml",
+    "aether-loki-a2a-stub.yaml",
 )
 
 
@@ -197,6 +198,7 @@ def main() -> int:
     print("    • Metrics adoption — AI dashboard notes")
     print("    • Aether — dashboard briefs (Agent Builder)")
     print("    • Aether — ML anomaly → Security via CPS")
+    print("    • Aether — Loki LogQL via A2A (stub)")
     return 0 if ok else 1
 
 

@@ -90,6 +90,7 @@ Env vars: `VITE_KIBANA_URL`, `VITE_ES_URL`, `VITE_SECURITY_KIBANA_URL`, `VITE_SE
 - [`docs/workshop-design.md`](docs/workshop-design.md)
 - [`docs/invite.md`](docs/invite.md)
 - [`docs/a2a-security-stub.md`](docs/a2a-security-stub.md)
+- [`docs/loki-a2a-stub.md`](docs/loki-a2a-stub.md) — Loki LogQL via workflow (coexistence POV)
 - [`docs/ml-anomaly-cps-security.md`](docs/ml-anomaly-cps-security.md)
 
 ## Agent Builder workflows
@@ -101,6 +102,7 @@ Deployed by `scripts/deploy_workshop_workflows.py` (Lab 1 migrate + Lab 2 publis
 | `workflows/metrics-adoption-recommendations.yaml` | AI notes for Grafana/Datadog metrics adoption |
 | `workflows/aether-dashboard-briefs.yaml` | Per-Aether-dashboard summary + remediation steps |
 | `workflows/aether-ml-anomaly-cps-security.yaml` | ML auth anomalies → Security correlation via CPS |
+| `workflows/aether-loki-a2a-stub.yaml` | Stub: Kibana workflow “calls” Loki LogQL (A2A coexistence) |
 
 ML job helper: `scripts/create_aether_ml_anomaly_job.py` — see [`docs/ml-anomaly-cps-security.md`](docs/ml-anomaly-cps-security.md).
 

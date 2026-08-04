@@ -1,0 +1,101 @@
+version: "1"
+name: Aether — Loki LogQL via A2A (stub)
+description: |
+  STUB — demonstrates coexistence: stay in Kibana, pull launch-window log context from
+  Grafana Loki via an A2A / HTTP workflow step (no live Loki in this lab).
+
+  Production shape:
+  1. Trigger on O11Y auth-failure alert or manual run
+  2. HTTP GET Loki `/loki/api/v1/query_range` with LogQL (A2A / connector path)
+  3. Agent Builder brief folds Loki lines + Elastic metrics into one remediation note
+  4. Analyst never leaves Kibana during the Grafana→Elastic migration window
+
+  Replace the console stub with a real `http` / connector step when `consts.loki_url`
+  points at a reachable Loki (Grafana Cloud Logs or self-hosted).
+enabled: true
+tags:
+  - aether-games
+  - a2a
+  - loki
+  - stub
+  - DEMO
+triggers:
+  - type: manual
+
+consts:
+  # Production: Grafana Cloud Logs or self-hosted Loki base URL (no trailing slash).
+  loki_url: "https://loki.aether-games.example"
+  logql: '{service_name="auth", studio="aether"} |= "login_failed"'
+
+steps:
+  - name: workflow-start
+    type: console
+    with:
+      message: |
+        Aether Loki A2A stub started (execution {{ execution.id }}).
+        Pattern: Kibana workflow → Loki LogQL (A2A) → Agent brief — stay in Kibana.
+        Stub only: no outbound call to {{ consts.loki_url }}.
+
+  - name: stub_loki_query
+    type: console
+    with:
+      message: |
+        STUB — production would HTTP GET:
+          {{ consts.loki_url }}/loki/api/v1/query_range
+          ?query={{ consts.logql }}
+          &limit=50&direction=backward
+        Auth: Bearer / basic (Grafana Cloud Logs token) via connector / A2A bridge.
+
+        Canned LogQL hits (launch window):
+        - 203.0.113.44 auth login_failed user=aether-user-88421 region=us-west reason=bad_password
+        - 203.0.113.44 auth login_failed user=aether-user-99102 region=us-west reason=bad_password
+        - 203.0.113.44 auth login_failed user=aether-user-12044 region=us-west reason=mfa_timeout
+        - 198.51.100.17 gateway rate_limit_exceeded route=/v1/login studio=aether
+        - anticheat signal severity=high player=aether-user-88421 device=fp-9c2a
+
+        Note: Kibana Grafana connector covers alerts/dashboards/silences — not Loki LogQL.
+        Log context from Loki is this workflow HTTP/A2A step (or a thin A2A bridge).
+
+  - name: agent_brief
+    type: ai.agent
+    with:
+      message: |
+        You are an Elastic SRE for **Aether Games**. Analysts are migrating off Grafana LGTM
+        but **Loki still holds application logs** this quarter. They want to stay in **Kibana**.
+
+        Canned Loki LogQL result (stub — treat as if returned from
+        {{ consts.loki_url }} query `{{ consts.logql }}`):
+        {{ steps.stub_loki_query.output }}
+
+        Produce markdown (max ~35 lines):
+        1. **Why this matters** — one sentence on coexistence (call Loki from Elastic so teams
+           use Kibana before logs are fully migrated).
+        2. **Loki evidence** — 4–6 bullets from the canned lines (IPs, users, reasons).
+        3. **Correlate in Elastic** — point at metrics-* auth failures + Security CPS
+           (`my-security-project-ac9463`) for the same entities.
+        4. **Production next steps**
+           - Replace this stub with a real HTTP/A2A step to Loki `query_range`
+           - Keep Grafana connector for Alertmanager / dashboards if useful
+           - Migrate hot log streams to Elastic when ready; workflow shrinks to ES|QL only
+        Do not invent hosts beyond the stub data.
+
+  - name: publish_markdown
+    type: kibana.request
+    with:
+      method: POST
+      path: /api/saved_objects/markdown/workshop-aether-loki-a2a-stub?overwrite=true
+      headers:
+        kbn-xsrf: "true"
+      body:
+        attributes:
+          title: "Aether — Loki LogQL via A2A (stub)"
+          description: "Stub brief: Kibana workflow calls Loki so analysts stay in Kibana during migration"
+          content: "{{ steps.agent_brief.output.message }}"
+
+  - name: workflow-done
+    type: console
+    with:
+      message: |
+        Stub complete. Markdown: workshop-aether-loki-a2a-stub
+        POV: Elastic→Loki via workflow/A2A = use Kibana without ripping out Loki on day one.
+        Production: swap stub_loki_query for HTTP GET {{ consts.loki_url }}/loki/api/v1/query_range

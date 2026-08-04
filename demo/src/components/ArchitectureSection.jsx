@@ -21,9 +21,9 @@ const SEC_ITEMS = [
 ];
 
 const NON_ELASTIC_EXAMPLES = [
+  'Loki LogQL (stay in Kibana)',
   'Grafana / Prometheus agents',
-  'Datadog or custom SIEM bots',
-  'Studio tooling & game backends',
+  'Datadog, SIEM, or studio backends',
 ];
 
 export function ArchitectureSection({ embedded = false } = {}) {
@@ -88,7 +88,7 @@ export function ArchitectureSection({ embedded = false } = {}) {
             <div>
               <p className="text-xs uppercase tracking-[0.14em] text-amber mb-1 font-medium">A2A</p>
               <p className="text-sm text-mist leading-relaxed">
-                Non-Elastic solutions — federate agents into Grafana, Datadog, custom SIEM, or studio backends via scoped endpoints.
+                Non-Elastic solutions — e.g. call Loki LogQL from a Kibana workflow so analysts stay in Kibana during migration; also Grafana, Datadog, SIEM, or studio backends.
               </p>
             </div>
           </div>
