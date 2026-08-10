@@ -109,8 +109,14 @@ bash /root/workshop/scripts/migrate_grafana_dashboards_to_serverless.sh
 In **Elastic Serverless**:
 
 - **Dashboards** — boards titled `Aether — …` on **`metrics-*`** (panels should show data after ~1–2 min of OTLP)
+- Scroll to the bottom of any Aether board for **AI Aether dashboard analysis** (Agent Builder), or open **Aether — AI notes**
 - **Machine Learning → Manage jobs** — **`aether-auth-failure-anomaly`** (created by Lab 1 migrate)
-- Optional: scroll for **AI notes** if enabled
+
+If AI strips are missing after migrate:
+
+```bash
+python3 /root/workshop/scripts/ensure_ai_recommendation_panels.py --platform grafana --seed-now
+```
 
 If panels are empty, re-pull the migrate script (Lab setup does this) and re-run Lab 1 — schema discovery needs `--es-url`.
 

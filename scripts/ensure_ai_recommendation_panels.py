@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Ensure Agent Builder–driven metrics-adoption notes on workshop dashboards.
+Ensure Agent Builder–driven dashboard analysis on Aether Games workshop boards.
 
-Mirrors the dbmonitoring pattern:
-  - library Markdown saved objects (workshop-ai-rec-grafana | workshop-ai-rec-datadog)
-  - Elasticsearch index metrics-adoption-recommendations
-  - AI Markdown strip on **every** migrated Grafana / Datadog dashboard
-  - dedicated overview dashboard **Metrics adoption — AI notes**
+Same pattern as dashboard-alert-migration / dbmonitoring:
+  - library Markdown saved objects (workshop-ai-rec-grafana)
+  - Elasticsearch index metrics-adoption-recommendations (+ aether-dashboard-briefs)
+  - AI Markdown strip on **every** migrated Aether Grafana dashboard
+  - dedicated overview dashboard **Aether — AI notes**
   - optional --seed-now via POST /api/agent_builder/converse (instant demo content)
 
 Also removes legacy static **What & why** markdown panels left from older asset builds.
@@ -41,61 +41,83 @@ ES_USER = os.environ.get("ES_USERNAME", "admin")
 ES_PASS = os.environ.get("ES_PASSWORD", "") or os.environ.get("ELASTICSEARCH_PASSWORD", "")
 
 REC_INDEX = "metrics-adoption-recommendations"
+BRIEFS_INDEX = "aether-dashboard-briefs"
+BRIEFS_MARKDOWN_ID = "workshop-aether-dashboard-briefs"
 REC_MARKDOWN_MAX = 48000
-PLATFORMS = ("grafana", "datadog")
-OVERVIEW_DASHBOARD_ID = "workshop-metrics-adoption-ai-notes"
-OVERVIEW_TITLE = "Metrics adoption — AI notes"
+# This track migrates Grafana → Kibana only; datadog kept for optional re-use.
+PLATFORMS = ("grafana",)
+OVERVIEW_DASHBOARD_ID = "workshop-aether-ai-notes"
+OVERVIEW_TITLE = "Aether — AI notes"
 
-# Every migrated board for the platform (titles must match assets/* generators).
+# Titles must match scripts/generate_gaming_grafana_dashboards.py / assets/grafana/*.json.
 ATTACH_TITLES: dict[str, tuple[str, ...]] = {
     "grafana": (
-        "Traffic overview",
-        "Request rate by service",
-        "Latency p95",
-        "Error rate",
-        "Operation errors by reason",
-        "Top services by traffic",
-        "POST /api/v1/orders volume",
-        "Latency by path",
-        "Status codes",
-        "SLO-style availability",
-        "Errors by service",
-        "Request mix",
-        "Throughput by host",
-        "Workload mix",
-        "GC pause indicator",
-        "Downstream latency p90",
-        "Queue depth stand-in",
-        "Success share (2xx)",
-        "Error churn",
-        "Endpoint availability",
+        "Aether — Platform overview",
+        "Aether — Matchmaking",
+        "Aether — Session gateway",
+        "Aether — Region capacity",
+        "Aether — Auth & login",
+        "Aether — Store checkout",
+        "Aether — Voice & chat",
+        "Aether — Launch window SLO",
+        "Aether — Party & social",
+        "Aether — Presence service",
+        "Aether — Inventory & entitlements",
+        "Aether — Anti-cheat signals (O11Y)",
+        "Aether — CDN & edge delivery",
+        "Aether — Dependency latency",
     ),
-    "datadog": (
-        "Service overview",
-        "Error budget view",
-        "Latency p95",
-        "Apdex-style satisfaction",
-        "Host CPU",
-        "Host memory",
-        "Disk I/O",
-        "Network bytes",
-        "Container CPU throttle",
-        "Log error spike",
-    ),
+    "datadog": (),
 }
 
+AETHER_DASHBOARD_CATALOG = """
+1. Aether — Platform overview — RPS, error rate, latency, concurrent players, request rate by service
+2. Aether — Matchmaking — queue depth, wait time, tickets/sec, matches, region breakdowns
+3. Aether — Session gateway — gateway RPS, 5xx, active sessions, connect latency
+4. Aether — Region capacity — concurrent players vs capacity by region
+5. Aether — Auth & login — login success/failure, auth latency
+6. Aether — Store checkout — checkout volume and duration
+7. Aether — Voice & chat — voice sessions and chat message rate
+8. Aether — Launch window SLO — error-budget style launch availability signal
+9. Aether — Party & social — parties, invites, party latency
+10. Aether — Presence service — presence updates/s, online users, fan-out lag, by region
+11. Aether — Inventory & entitlements — entitlement grants and grant latency
+12. Aether — Anti-cheat signals (O11Y) — signal volume and flagged sessions
+13. Aether — CDN & edge delivery — cache hit ratio and edge latency
+14. Aether — Dependency latency — postgres / redis / kafka dependency timings
+""".strip()
+
 SEED_PROMPTS = {
-    "grafana": """You are an Elastic Observability specialist helping existing Elastic customers
-adopt metrics on Observability Serverless. Workshop context: OTLP → Alloy → mOTLP into metrics-*/logs-*/traces-*;
-Grafana/PromQL boards (Traffic overview, latency, errors) with http_requests_total, service.name, host.name.
-Produce concise markdown (max ~35 lines): (1) what to validate first on PromQL-shaped boards,
-(2) Discover/ES|QL checks on metrics-*, (3) first alerts to enable from drafts, (4) why reusing PromQL
-dashboard IP accelerates metrics adoption. Keep advice generic.""",
-    "datadog": """You are an Elastic Observability specialist helping existing Elastic customers
-adopt metrics on Observability Serverless. Workshop context: same OTLP path; Datadog-shaped boards
-(Service overview, host CPU/memory) via datadog-migrate --field-profile otel; monitors become disabled rule drafts.
-Produce concise markdown (max ~35 lines): (1) what to validate first, (2) OTel attrs vs DD tags,
-(3) monitor→rule governance, (4) why DD exports accelerate metrics adoption on Elastic. Keep advice generic.""",
+    "grafana": f"""You are an Elastic Observability SRE coach for the fictional AAA studio **Aether Games**.
+
+Telemetry path: OpenTelemetry → Grafana Alloy → Elastic managed OTLP (mOTLP).
+Indices: **metrics-***, **logs-***, **traces-***. Region attributes are usually top-level **region**.
+Latency series are **gauges** (avg(...)); Kafka lag and counters are plain numeric fields.
+
+Dashboard catalog (one section each):
+{AETHER_DASHBOARD_CATALOG}
+
+Produce markdown (max ~80 lines) with **one H3 section per dashboard** in catalog order.
+For each dashboard include exactly:
+- **Shows** — 1–2 sentences on what operators use the board for
+- **Read** — 2–4 bullets on golden signals (RPS, errors, latency, queue, players, etc.)
+- **Issues & resolve** — If healthy: "No acute issue — continue monitoring."
+  Otherwise prefer these workshop failure modes when relevant:
+  1. **verification_exception Unknown column *_sum / *_count / value** → remigrate with
+     WORKSHOP_FORCE_OTEL_RESTART=1 bash scripts/migrate_grafana_dashboards_to_serverless.sh
+     (fleet emits gauges; Lab 1 patches leftover histogram ES|QL).
+  2. **Unknown column cloud.region** → run
+     python3 tools/patch_aether_dashboard_region_fields.py --search Aether
+  3. **High 5xx / auth failure spike** → Discover status=~5..; check Auth + Session gateway;
+     review disabled alert drafts; Security correlation is A2A/CCS stub in Lab 2.
+  4. **Empty charts** → restart fleet, wait 1–2 minutes, confirm metrics-* in Discover.
+
+End with a short **Ops checklist** (5 bullets): seed → Platform overview → Matchmaking → Auth →
+enable alert drafts only after review.
+
+Do not invent cluster hostnames. Keep language actionable for Instruqt + Kibana.""",
+    "datadog": """You are an Elastic Observability specialist. This Aether Games track does not
+migrate Datadog boards; reply with a one-line note that Grafana/Aether AI notes apply instead.""",
 }
 
 
@@ -168,22 +190,29 @@ def ensure_rec_index() -> bool:
                 "source": {"type": "keyword"},
                 "dashboard_platform": {"type": "keyword"},
                 "recommendation": {"type": "text"},
+                "brief": {"type": "text"},
+                "dashboard_count": {"type": "integer"},
             }
         }
     }
-    payload, status = es("PUT", f"/{REC_INDEX}", mappings)
-    if status in (200, 201):
-        print(f"  ✓ index {REC_INDEX} ready (HTTP {status})")
-        return True
-    if status == 400 and isinstance(payload, dict) and "resource_already_exists" in str(payload.get("_body", "")):
-        print(f"  ✓ index {REC_INDEX} already exists")
-        return True
-    _, gstatus = es("GET", f"/{REC_INDEX}")
-    if gstatus == 200:
-        print(f"  ✓ index {REC_INDEX} already exists")
-        return True
-    print(f"  WARN: ensure index {REC_INDEX} → HTTP {status}: {str(payload)[:300]}", file=sys.stderr)
-    return False
+    ok = True
+    for index in (REC_INDEX, BRIEFS_INDEX):
+        payload, status = es("PUT", f"/{index}", mappings)
+        if status in (200, 201):
+            print(f"  ✓ index {index} ready (HTTP {status})")
+            continue
+        if status == 400 and isinstance(payload, dict) and "resource_already_exists" in str(
+            payload.get("_body", "")
+        ):
+            print(f"  ✓ index {index} already exists")
+            continue
+        _, gstatus = es("GET", f"/{index}")
+        if gstatus == 200:
+            print(f"  ✓ index {index} already exists")
+            continue
+        print(f"  WARN: ensure index {index} → HTTP {status}: {str(payload)[:300]}", file=sys.stderr)
+        ok = False
+    return ok
 
 
 def markdown_exists(so_id: str) -> bool:
@@ -213,27 +242,35 @@ def post_markdown(so_id: str, title: str, content: str) -> bool:
 
 def ensure_markdown_placeholders(platforms: tuple[str, ...]) -> bool:
     placeholder = (
-        "### AI metrics adoption notes\n\n"
-        "_This panel updates when **Metrics adoption — AI dashboard notes** runs "
-        "(every 10 minutes or on manual run in **Management → Workflows**). "
-        "Or re-run: `python3 scripts/ensure_ai_recommendation_panels.py --seed-now`._"
+        "### Aether AI dashboard analysis\n\n"
+        "_This panel updates when **Aether — dashboard briefs (Agent Builder)** or "
+        "**Metrics adoption — AI dashboard notes** runs "
+        "(Management → Workflows), or re-run: "
+        "`python3 scripts/ensure_ai_recommendation_panels.py --seed-now`._"
     )
     ok = True
     for p in platforms:
         sid = rec_markdown_so_id(p)
-        title = f"AI metrics adoption notes — {p}"
+        title = ai_panel_title(p)
         if markdown_exists(sid):
             print(f"  ✓ markdown {sid} exists")
-            continue
-        if post_markdown(sid, title, placeholder):
+        elif post_markdown(sid, title, placeholder):
             print(f"  ✓ created markdown {sid}")
         else:
             ok = False
+    if markdown_exists(BRIEFS_MARKDOWN_ID):
+        print(f"  ✓ markdown {BRIEFS_MARKDOWN_ID} exists")
+    elif post_markdown(BRIEFS_MARKDOWN_ID, "Aether — AI dashboard briefs", placeholder):
+        print(f"  ✓ created markdown {BRIEFS_MARKDOWN_ID}")
+    else:
+        ok = False
     return ok
 
 
 def ai_panel_title(platform: str) -> str:
-    return f"AI metrics adoption notes — {platform}"
+    if platform == "grafana":
+        return "AI Aether dashboard analysis"
+    return f"AI Aether notes — {platform}"
 
 
 def get_markdown_content(so_id: str) -> str:
@@ -245,7 +282,7 @@ def get_markdown_content(so_id: str) -> str:
         if content.strip():
             return str(content)[:REC_MARKDOWN_MAX]
     return (
-        "### AI metrics adoption notes\n\n"
+        "### Aether AI dashboard analysis\n\n"
         "_Waiting for Agent Builder seed / workflow run._"
     )
 
@@ -376,9 +413,9 @@ def clean_description(desc: str | None) -> str:
     ):
         d = d.replace(junk, "")
     d = d.strip(" —")
-    if d and "AI notes" not in d:
-        return f"{d} — AI notes at bottom."
-    return d or "Metrics adoption workshop board — AI notes at bottom."
+    if d and "AI notes" not in d and "AI analysis" not in d:
+        return f"{d} — Agent Builder analysis at bottom."
+    return d or "Aether Games workshop board — Agent Builder analysis at bottom."
 
 
 def ensure_overview_dashboard(platforms: tuple[str, ...]) -> None:
@@ -388,12 +425,22 @@ def ensure_overview_dashboard(platforms: tuple[str, ...]) -> None:
         # Overview keeps library refs so the workflow refresh is visible without re-attach.
         panels.append(markdown_panel_library_ref(p, (0, y, 48, 16)))
         y += 16
+    # Also surface the dedicated briefs library markdown.
+    panels.append(
+        {
+            "type": "markdown",
+            "id": gid(),
+            "grid": {"x": 0, "y": y, "w": 48, "h": 16},
+            "config": {"ref_id": BRIEFS_MARKDOWN_ID},
+        }
+    )
     body = {
         "id": OVERVIEW_DASHBOARD_ID,
         "title": OVERVIEW_TITLE,
         "description": (
-            "Agent Builder metrics-adoption notes for existing Elastic customers. "
-            "Content refreshes from the Metrics adoption — AI dashboard notes workflow."
+            "Agent Builder analysis for Aether Games dashboards (PromQL → Kibana). "
+            "Content refreshes from **Aether — dashboard briefs** and "
+            "**Metrics adoption — AI dashboard notes** workflows."
         ),
         "time_range": {"from": "now-30m", "to": "now"},
         "panels": panels,
@@ -425,16 +472,19 @@ def is_ai_notes_panel(panel: dict, platform: str | None = None) -> bool:
     if not isinstance(panel, dict):
         return False
     blob = _panel_blob(panel)
-    if "ai metrics adoption notes" in blob:
-        if platform and platform not in blob and f"workshop-ai-rec-{platform}" not in blob:
-            # Title/content may omit platform; still treat as AI strip to replace.
-            return "ai metrics adoption notes" in blob
+    markers = (
+        "ai metrics adoption notes",
+        "ai aether dashboard analysis",
+        "ai aether notes",
+        "ai aether ops notes",
+    )
+    if any(m in blob for m in markers):
         return True
     cfg = panel.get("config") or {}
     rid = cfg.get("ref_id") or ""
     if platform and rid == rec_markdown_so_id(platform):
         return True
-    if rid.startswith("workshop-ai-rec-"):
+    if rid.startswith("workshop-ai-rec-") or rid == BRIEFS_MARKDOWN_ID:
         return True
     return False
 
@@ -643,13 +693,16 @@ def seed_via_agent_builder(platforms: tuple[str, ...]) -> None:
         title = ai_panel_title(p)
         if post_markdown(rec_markdown_so_id(p), title, str(msg)):
             print(f"  ✓ seeded markdown {rec_markdown_so_id(p)}")
+        if p == "grafana" and post_markdown(BRIEFS_MARKDOWN_ID, "Aether — AI dashboard briefs", str(msg)):
+            print(f"  ✓ seeded markdown {BRIEFS_MARKDOWN_ID}")
+        ts = __import__("datetime").datetime.now(
+            __import__("datetime").timezone.utc
+        ).strftime("%Y-%m-%dT%H:%M:%SZ")
         es(
             "POST",
             f"/{REC_INDEX}/_doc",
             {
-                "@timestamp": __import__("datetime").datetime.now(
-                    __import__("datetime").timezone.utc
-                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "@timestamp": ts,
                 "execution_id": f"seed-{gid()}",
                 "workflow_name": "ensure_ai_recommendation_panels.py",
                 "source": "agent_builder_seed",
@@ -657,7 +710,19 @@ def seed_via_agent_builder(platforms: tuple[str, ...]) -> None:
                 "recommendation": str(msg)[:REC_MARKDOWN_MAX],
             },
         )
-
+        if p == "grafana":
+            es(
+                "POST",
+                f"/{BRIEFS_INDEX}/_doc",
+                {
+                    "@timestamp": ts,
+                    "execution_id": f"seed-{gid()}",
+                    "workflow_name": "ensure_ai_recommendation_panels.py",
+                    "source": "agent_builder_seed",
+                    "dashboard_count": len(ATTACH_TITLES.get("grafana") or ()),
+                    "brief": str(msg)[:REC_MARKDOWN_MAX],
+                },
+            )
 
 
 def main() -> int:
@@ -668,15 +733,15 @@ def main() -> int:
     ap.add_argument("--seed-now", action="store_true", help="Call Agent Builder now to fill markdown")
     ap.add_argument(
         "--platform",
-        choices=PLATFORMS,
+        choices=("grafana", "datadog"),
         action="append",
-        help="Limit to one platform (repeatable). Default: both.",
+        help="Limit to one platform (repeatable). Default: grafana.",
     )
     ap.add_argument("--skip-attach", action="store_true", help="Do not append panels to migrated dashboards")
     args = ap.parse_args()
     platforms = tuple(args.platform) if args.platform else PLATFORMS
 
-    print("==> Metrics adoption AI recommendation panels")
+    print("==> Aether Agent Builder dashboard analysis panels")
     ensure_rec_index()
     ensure_markdown_placeholders(platforms)
     if args.seed_now:
@@ -685,7 +750,10 @@ def main() -> int:
     if not args.skip_attach:
         for p in platforms:
             attach_to_migrated_dashboards(p)
-    print("==> Done. Open any migrated dashboard — AI notes strip at the bottom (dbmonitoring pattern).")
+    print(
+        "==> Done. Open any Aether — * dashboard — AI analysis strip at the bottom "
+        f"(overview: {OVERVIEW_TITLE!r})."
+    )
     return 0
 
 

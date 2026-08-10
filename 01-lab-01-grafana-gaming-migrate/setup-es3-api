@@ -12,7 +12,8 @@ _owner_repo="$(printf '%s\n' "$_ghpath" | cut -d/ -f1-2)"
 [[ "$_owner_repo" != *"/"* ]] && _owner_repo="poulsbopete/011y-gaming"
 
 BASE="https://raw.githubusercontent.com/${_owner_repo}/${REF}"
-mkdir -p "${WORKSHOP}/scripts" "${WORKSHOP}/tools" "${WORKSHOP}/assets/elasticsearch/templates" "${WORKSHOP}/assets/grafana"
+mkdir -p "${WORKSHOP}/scripts" "${WORKSHOP}/tools" "${WORKSHOP}/workflows" \
+  "${WORKSHOP}/assets/elasticsearch/templates" "${WORKSHOP}/assets/grafana"
 
 _refresh() {
   local rel="$1"
@@ -26,9 +27,13 @@ _refresh() {
 _refresh "scripts/migrate_grafana_dashboards_to_serverless.sh"
 _refresh "scripts/apply_aether_gaming_index_templates.py"
 _refresh "scripts/create_aether_ml_anomaly_job.py"
+_refresh "scripts/ensure_ai_recommendation_panels.py"
+_refresh "scripts/deploy_workshop_workflows.py"
 _refresh "tools/otel_gaming_fleet.py"
 _refresh "tools/patch_aether_dashboard_region_fields.py"
 _refresh "tools/patch_aether_dashboard_esql_fields.py"
+_refresh "workflows/metrics-adoption-recommendations.yaml"
+_refresh "workflows/aether-dashboard-briefs.yaml"
 _refresh "assets/elasticsearch/templates/aether-gaming-component-template.json"
 _refresh "assets/elasticsearch/templates/aether-gaming-index-template.json"
 _refresh "assets/elasticsearch/templates/aether-gaming-default-pipeline.json"

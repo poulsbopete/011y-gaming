@@ -138,7 +138,7 @@ ALERT_COMPARISON="${OUT}/alert_comparison_results.json"
 [ -f "${OUT}/alerts/alert_comparison_results.json" ] && ALERT_COMPARISON="${OUT}/alerts/alert_comparison_results.json"
 "${PY}" "${ROOT}/tools/publish_grafana_alert_drafts_kibana.py" --comparison "${ALERT_COMPARISON}"
 
-echo "==> [4/6] Agent Builder metrics-adoption notes (markdown panels + workflow)..."
+echo "==> [4/6] Agent Builder Aether dashboard analysis (markdown panels + workflows)..."
 if [ "${WORKSHOP_SKIP_AI_NOTES:-0}" = "1" ]; then
   echo "    Skipping (WORKSHOP_SKIP_AI_NOTES=1)."
 else
@@ -158,7 +158,8 @@ else
     || echo "    WARN: ML job create/start failed (need ML privileges + metrics in metrics-*)." >&2
 fi
 
-echo "==> [6/6] Open Elastic Serverless → Dashboards (incl. **Metrics adoption — AI notes**) + ML → Anomaly Detection."
+echo "==> [6/6] Open Elastic Serverless → Dashboards (any **Aether — *** board + **Aether — AI notes**) + ML → Anomaly Detection."
 echo "    Artifacts: ${OUT}/migration_report.json (or dashboards/), alert_comparison_results.json (or alerts/)"
 echo "    ML job: aether-auth-failure-anomaly (Machine Learning → Manage jobs)"
+echo "    Re-seed AI analysis: python3 scripts/ensure_ai_recommendation_panels.py --platform grafana --seed-now"
 echo "==> Done."

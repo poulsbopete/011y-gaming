@@ -12,7 +12,7 @@ _owner_repo="$(printf '%s\n' "$_ghpath" | cut -d/ -f1-2)"
 [[ "$_owner_repo" != *"/"* ]] && _owner_repo="poulsbopete/011y-gaming"
 
 BASE="https://raw.githubusercontent.com/${_owner_repo}/${REF}"
-mkdir -p "${WORKSHOP}/scripts" "${WORKSHOP}/tools" "${WORKSHOP}/assets/elasticsearch/templates"
+mkdir -p "${WORKSHOP}/scripts" "${WORKSHOP}/tools" "${WORKSHOP}/workflows" "${WORKSHOP}/assets/elasticsearch/templates"
 
 _refresh() {
   local rel="$1"
@@ -26,6 +26,10 @@ _refresh() {
 _refresh "tools/publish_grafana_alert_drafts_kibana.py"
 _refresh "scripts/publish_alerts_and_a2a_stub.sh"
 _refresh "scripts/demo_a2a_security_stub.sh"
+_refresh "scripts/ensure_ai_recommendation_panels.py"
+_refresh "scripts/deploy_workshop_workflows.py"
+_refresh "workflows/aether-dashboard-briefs.yaml"
+_refresh "workflows/metrics-adoption-recommendations.yaml"
 # Ensure demo stub is executable after refresh
 chmod +x "${WORKSHOP}/scripts/demo_a2a_security_stub.sh" 2>/dev/null || true
 _refresh "scripts/apply_aether_gaming_index_templates.py"

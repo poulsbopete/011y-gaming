@@ -6,6 +6,12 @@
 
 **If panels empty:** wait ~1–2 minutes after migrate; confirm Alloy + `otel_gaming_fleet.py` with `bash scripts/check_workshop_otel_pipeline.sh`.
 
+**Agent Builder analysis:** Lab 1 migrate seeds and attaches an AI strip to every `Aether — *` board (same pattern as dashboard-alert-migration). Overview: **Aether — AI notes**. Re-seed:
+
+```bash
+python3 /root/workshop/scripts/ensure_ai_recommendation_panels.py --platform grafana --seed-now
+```
+
 **If panels show `verification_exception` / Unknown column (`_sum`, `_count`, or `value`):** latency metrics must be gauges. Re-run with a fleet restart so migrate rewrites ES|QL:
 
 ```bash

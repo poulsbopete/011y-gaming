@@ -533,42 +533,45 @@ if [ "${WORKSHOP_SKIP_ML:-0}" != "1" ] && [ "$PIPELINE_OK" = "1" ] && [ -n "${WO
 fi
 
 # ---------------------------------------------------------------------------
-# Agent Builder / Workflows prep (metrics-adoption AI notes on dashboards)
-# Full seed runs after Lab migrate scripts; here we only create the ES index + enable UI.
+# Agent Builder / Workflows prep (Aether dashboard AI analysis strips)
+# Full seed + attach runs after Lab 1 migrate; here create indexes + enable UI.
 # ---------------------------------------------------------------------------
 if [ -n "${ES_URL:-}" ] && { [ -n "${WORKSHOP_ES_API_KEY:-}" ] || [ -n "${ELASTICSEARCH_PASSWORD:-}" ]; }; then
-  echo "Ensuring Elasticsearch index metrics-adoption-recommendations exists..."
-  if [ -n "${WORKSHOP_ES_API_KEY:-}" ]; then
-    _rec_ix=$(curl -sS -o /tmp/rec-index-body.json -w "%{http_code}" -X PUT "${ES_URL}/metrics-adoption-recommendations" \
-      -H "Authorization: ApiKey ${WORKSHOP_ES_API_KEY}" \
-      -H "Content-Type: application/json" \
-      -d '{"mappings":{"properties":{"@timestamp":{"type":"date"},"execution_id":{"type":"keyword"},"workflow_name":{"type":"keyword"},"source":{"type":"keyword"},"dashboard_platform":{"type":"keyword"},"recommendation":{"type":"text"}}}}')
-  else
-    _rec_ix=$(curl -sS -o /tmp/rec-index-body.json -w "%{http_code}" -X PUT "${ES_URL}/metrics-adoption-recommendations" \
-      -u "admin:${ELASTICSEARCH_PASSWORD}" \
-      -H "Content-Type: application/json" \
-      -d '{"mappings":{"properties":{"@timestamp":{"type":"date"},"execution_id":{"type":"keyword"},"workflow_name":{"type":"keyword"},"source":{"type":"keyword"},"dashboard_platform":{"type":"keyword"},"recommendation":{"type":"text"}}}}')
-  fi
-  echo "DEBUG: PUT metrics-adoption-recommendations HTTP ${_rec_ix}"
+  echo "Ensuring Elasticsearch indexes for Agent Builder AI notes / briefs..."
+  for _ix in metrics-adoption-recommendations aether-dashboard-briefs; do
+    if [ -n "${WORKSHOP_ES_API_KEY:-}" ]; then
+      _rec_ix=$(curl -sS -o /tmp/rec-index-body.json -w "%{http_code}" -X PUT "${ES_URL}/${_ix}" \
+        -H "Authorization: ApiKey ${WORKSHOP_ES_API_KEY}" \
+        -H "Content-Type: application/json" \
+        -d '{"mappings":{"properties":{"@timestamp":{"type":"date"},"execution_id":{"type":"keyword"},"workflow_name":{"type":"keyword"},"source":{"type":"keyword"},"dashboard_platform":{"type":"keyword"},"recommendation":{"type":"text"},"brief":{"type":"text"},"dashboard_count":{"type":"integer"}}}}')
+    else
+      _rec_ix=$(curl -sS -o /tmp/rec-index-body.json -w "%{http_code}" -X PUT "${ES_URL}/${_ix}" \
+        -u "admin:${ELASTICSEARCH_PASSWORD}" \
+        -H "Content-Type: application/json" \
+        -d '{"mappings":{"properties":{"@timestamp":{"type":"date"},"execution_id":{"type":"keyword"},"workflow_name":{"type":"keyword"},"source":{"type":"keyword"},"dashboard_platform":{"type":"keyword"},"recommendation":{"type":"text"},"brief":{"type":"text"},"dashboard_count":{"type":"integer"}}}}')
+    fi
+    echo "DEBUG: PUT ${_ix} HTTP ${_rec_ix}"
+  done
 fi
 
 if [ -n "${KIBANA_URL:-}" ] && [ -n "${WORKSHOP_ES_API_KEY:-}" ]; then
-  echo "Enabling workflows:ui:enabled + deploying Metrics adoption AI workflow..."
+  echo "Enabling workflows:ui:enabled + deploying Aether Agent Builder workflows..."
   export KIBANA_URL ES_API_KEY="$WORKSHOP_ES_API_KEY" ES_URL
   # Give Kibana a moment after project create before Workflows / Agent Builder APIs accept writes.
   sleep 15
   set +e
   /opt/workshop-venv/bin/python3 "$TRACK_ROOT/scripts/deploy_workshop_workflows.py" \
     metrics-adoption-recommendations.yaml \
+    aether-dashboard-briefs.yaml \
     | tee /tmp/workshop-workflow-deploy.log
   /opt/workshop-venv/bin/python3 "$TRACK_ROOT/scripts/ensure_ai_recommendation_panels.py" --skip-attach \
     | tee -a /tmp/workshop-workflow-deploy.log
   set -e
   echo "DEBUG: workflow deploy log → /tmp/workshop-workflow-deploy.log"
-  echo "    To seed Agent Builder text now (or after migrate):"
-  echo "      source ~/.bashrc && python3 /root/workshop/scripts/ensure_ai_recommendation_panels.py --seed-now"
-  echo "    To re-deploy / list workflows:"
-  echo "      python3 /root/workshop/scripts/deploy_workshop_workflows.py"
+  echo "    After Lab 1 migrate, AI analysis attaches to every Aether — * board."
+  echo "    Re-seed now (or after migrate):"
+  echo "      source ~/.bashrc && python3 /root/workshop/scripts/ensure_ai_recommendation_panels.py --platform grafana --seed-now"
+  echo "    Manual briefs: Management → Workflows → Aether — dashboard briefs (Agent Builder) → Run"
 fi
 
 echo "Track bootstrap complete."

@@ -96,21 +96,27 @@ Env vars: `VITE_KIBANA_URL`, `VITE_ES_URL`, `VITE_SECURITY_KIBANA_URL`, `VITE_SE
 
 ## Agent Builder workflows
 
+Same pattern as the metrics-adoption workshop: after Lab 1 migrate, Agent Builder seeds markdown and attaches an **AI Aether dashboard analysis** strip to every `Aether — *` board, plus overview **Aether — AI notes**.
+
 Deployed by `scripts/deploy_workshop_workflows.py` (Lab 1 migrate + Lab 2 publish):
 
 | Workflow | Purpose |
 | --- | --- |
-| `workflows/metrics-adoption-recommendations.yaml` | AI notes for Grafana/Datadog metrics adoption |
-| `workflows/aether-dashboard-briefs.yaml` | Per-Aether-dashboard summary + remediation steps |
+| `workflows/metrics-adoption-recommendations.yaml` | Scheduled AI analysis for Aether Grafana boards → `workshop-ai-rec-grafana` |
+| `workflows/aether-dashboard-briefs.yaml` | Per-dashboard Shows / Read / Issues & resolve briefs |
 | `workflows/aether-ml-anomaly-cps-security.yaml` | ML auth anomalies → Security correlation via CPS |
 | `workflows/aether-loki-a2a-stub.yaml` | Stub: Kibana workflow “calls” Loki LogQL (A2A coexistence) |
 | `scripts/seed_loki_stub_dashboards.py` | Seed stub Loki logs + Auth / Launch-window dashboards |
 
-ML job helper: `scripts/create_aether_ml_anomaly_job.py` — see [`docs/ml-anomaly-cps-security.md`](docs/ml-anomaly-cps-security.md).
+Seed / re-attach:
 
-Gaming index templates: `scripts/apply_aether_gaming_index_templates.py` — see [`docs/gaming-index-templates.md`](docs/gaming-index-templates.md).
+```bash
+python3 scripts/ensure_ai_recommendation_panels.py --platform grafana --seed-now
+```
 
-In Kibana: **Management → Workflows → Aether — dashboard briefs (Agent Builder) → Run**. Output lands in index `aether-dashboard-briefs` and Markdown **workshop-aether-dashboard-briefs**.
+Skip: `WORKSHOP_SKIP_AI_NOTES=1`.
+
+In Kibana: open any **Aether — *** dashboard (scroll to bottom), or **Dashboards → Aether — AI notes**, or **Management → Workflows → Aether — dashboard briefs (Agent Builder) → Run**.
 
 ## Layout
 
