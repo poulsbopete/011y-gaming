@@ -130,7 +130,7 @@ else
   echo "    YAML dashboards: ${n_yaml} (under ${OUT}/yaml/)"
 fi
 
-echo "==> [3/5] Publishing Grafana-derived rules from alert_comparison_results.json (disabled in Kibana by default)..."
+echo "==> [3/6] Publishing Grafana-derived rules from alert_comparison_results.json (disabled in Kibana by default)..."
 ALERT_COMPARISON="${OUT}/alert_comparison_results.json"
 [ -f "${OUT}/alerts/alert_comparison_results.json" ] && ALERT_COMPARISON="${OUT}/alerts/alert_comparison_results.json"
 "${PY}" "${ROOT}/tools/publish_grafana_alert_drafts_kibana.py" --comparison "${ALERT_COMPARISON}"
