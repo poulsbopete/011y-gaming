@@ -1,5 +1,5 @@
 #!/bin/bash
-# Lab 2 host setup: refresh alert publisher + Lab 2 script from GitHub (stale track mounts).
+# Lab 2 host setup: refresh alert publisher, ML helpers, templates from GitHub; create ML job on this play's ES.
 set -euxo pipefail
 
 WORKSHOP="${WORKSHOP_ROOT:-/root/workshop}"
@@ -12,7 +12,7 @@ _owner_repo="$(printf '%s\n' "$_ghpath" | cut -d/ -f1-2)"
 [[ "$_owner_repo" != *"/"* ]] && _owner_repo="poulsbopete/011y-gaming"
 
 BASE="https://raw.githubusercontent.com/${_owner_repo}/${REF}"
-mkdir -p "${WORKSHOP}/scripts" "${WORKSHOP}/tools"
+mkdir -p "${WORKSHOP}/scripts" "${WORKSHOP}/tools" "${WORKSHOP}/assets/elasticsearch/templates"
 
 _refresh() {
   local rel="$1"
@@ -26,6 +26,35 @@ _refresh() {
 _refresh "tools/publish_grafana_alert_drafts_kibana.py"
 _refresh "scripts/publish_alerts_and_a2a_stub.sh"
 _refresh "scripts/demo_a2a_security_stub.sh"
+_refresh "scripts/apply_aether_gaming_index_templates.py"
+_refresh "scripts/create_aether_ml_anomaly_job.py"
+_refresh "assets/elasticsearch/templates/aether-gaming-component-template.json"
+_refresh "assets/elasticsearch/templates/aether-gaming-index-template.json"
+_refresh "assets/elasticsearch/templates/aether-gaming-default-pipeline.json"
 
 chmod +x "${WORKSHOP}/scripts/"*.sh 2>/dev/null || true
+chmod +x "${WORKSHOP}/scripts/"*.py 2>/dev/null || true
 chmod +x "${WORKSHOP}/tools/"*.py 2>/dev/null || true
+
+# shellcheck disable=SC1090
+[[ -f /root/.bashrc ]] && source /root/.bashrc
+
+PY="${WORKSHOP_PYTHON:-}"
+if [ -z "$PY" ]; then
+  if [ -x /opt/workshop-venv/bin/python3 ]; then
+    PY=/opt/workshop-venv/bin/python3
+  else
+    PY=python3
+  fi
+fi
+
+# Create ML job on **this** Instruqt Serverless project (not the fixed demo).
+if [ "${WORKSHOP_SKIP_ML:-0}" != "1" ] && [ -n "${ES_URL:-}" ] && { [ -n "${ES_API_KEY:-}" ] || [ -n "${ES_PASSWORD:-}" ]; }; then
+  echo "==> Lab 2 setup: gaming templates + ML job aether-auth-failure-anomaly on ${ES_URL}"
+  "$PY" "${WORKSHOP}/scripts/apply_aether_gaming_index_templates.py" \
+    || echo "WARN: apply_aether_gaming_index_templates.py failed" >&2
+  "$PY" "${WORKSHOP}/scripts/create_aether_ml_anomaly_job.py" --start --skip-alert \
+    || echo "WARN: create_aether_ml_anomaly_job.py failed (metrics may still be warming)" >&2
+else
+  echo "WARN: skip ML setup (WORKSHOP_SKIP_ML=1 or missing ES_URL/credentials)" >&2
+fi

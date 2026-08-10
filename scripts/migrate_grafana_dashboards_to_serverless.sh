@@ -57,15 +57,15 @@ mkdir -p "${OUT}"
 
 WAIT_OTLP=0
 if [ "${WORKSHOP_SKIP_OTEL:-0}" = "1" ]; then
-  echo "==> [1/5] Skipping OTLP (WORKSHOP_SKIP_OTEL=1 — use only if telemetry is already in Elasticsearch)."
+  echo "==> [1/6] Skipping OTLP (WORKSHOP_SKIP_OTEL=1 — use only if telemetry is already in Elasticsearch)."
 elif [ "${WORKSHOP_FORCE_OTEL_RESTART:-0}" != "1" ] \
   && curl -sf --max-time 3 "http://127.0.0.1:12345/metrics" >/dev/null 2>&1 \
   && pgrep -f '[o]tel_gaming_fleet.py' >/dev/null 2>&1; then
-  echo "==> [1/5] OTLP already running (Alloy + Aether Games fleet). Skipping restart."
+  echo "==> [1/6] OTLP already running (Alloy + Aether Games fleet). Skipping restart."
   echo "    To force a full restart: WORKSHOP_FORCE_OTEL_RESTART=1 bash ${ROOT}/scripts/migrate_grafana_dashboards_to_serverless.sh"
   WAIT_OTLP=45
 else
-  echo "==> [1/5] OpenTelemetry pipeline (Alloy → Elastic mOTLP + Aether Games fleet)..."
+  echo "==> [1/6] OpenTelemetry pipeline (Alloy → Elastic mOTLP + Aether Games fleet)..."
   if ! "${ROOT}/scripts/start_workshop_otel.sh"; then
     echo "    ERROR: start_workshop_otel.sh failed (need ES_API_KEY and WORKSHOP_OTLP_ENDPOINT or derivable ES_URL/KIBANA_URL)." >&2
     exit 1
@@ -80,14 +80,15 @@ fi
 echo "    OTLP metrics include gaming series (matchmaking, session gateway, auth, store) plus http_requests_total."
 echo "    Restart emitters: WORKSHOP_FORCE_OTEL_RESTART=1 bash ${ROOT}/scripts/migrate_grafana_dashboards_to_serverless.sh"
 
-# mig-to-kbn defaults --es-url from ES_URL in the environment (~/.bashrc). Empty strings on the CLI override that
-# so Kibana-only upload does not auto-enable live ES|QL validation (see datadog/grafana cli.py).
-ES_ES_ARGS=(--es-url "" --es-api-key "")
+# Always pass ES_URL for **target schema discovery** so PromQL→ES|QL uses real field
+# names from the sandbox (empty --es-url leaves OTel guesses → empty panels).
+# Optional live ES|QL validation: WORKSHOP_MIG_ES_VALIDATE=1
+ES_ES_ARGS=(--es-url "${ES_URL}" --es-api-key "${ES_API_KEY:-}")
 if [ "${WORKSHOP_MIG_ES_VALIDATE:-0}" = "1" ]; then
-  ES_ES_ARGS=(--es-url "${ES_URL}" --es-api-key "${ES_API_KEY}" --validate)
-  echo "==> [2/5] grafana-migrate (… + live ES|QL validation: WORKSHOP_MIG_ES_VALIDATE=1)..."
+  ES_ES_ARGS+=(--validate)
+  echo "==> [2/6] grafana-migrate (schema discovery + live ES|QL validation)..."
 else
-  echo "==> [2/5] grafana-migrate (Kibana-only upload; ES_URL in env ignored for validation — WORKSHOP_MIG_ES_VALIDATE=1 to enable)..."
+  echo "==> [2/6] grafana-migrate (schema discovery via ES_URL; set WORKSHOP_MIG_ES_VALIDATE=1 for query validation)..."
 fi
 
 # observability-migration-platform renamed --native-promql → --translation-mode native.
@@ -134,7 +135,7 @@ ALERT_COMPARISON="${OUT}/alert_comparison_results.json"
 [ -f "${OUT}/alerts/alert_comparison_results.json" ] && ALERT_COMPARISON="${OUT}/alerts/alert_comparison_results.json"
 "${PY}" "${ROOT}/tools/publish_grafana_alert_drafts_kibana.py" --comparison "${ALERT_COMPARISON}"
 
-echo "==> [4/5] Agent Builder metrics-adoption notes (markdown panels + workflow)..."
+echo "==> [4/6] Agent Builder metrics-adoption notes (markdown panels + workflow)..."
 if [ "${WORKSHOP_SKIP_AI_NOTES:-0}" = "1" ]; then
   echo "    Skipping (WORKSHOP_SKIP_AI_NOTES=1)."
 else
@@ -144,6 +145,17 @@ else
     || echo "    WARN: deploy_workshop_workflows.py failed (AI notes panels may still work via --seed-now)." >&2
 fi
 
-echo "==> [5/5] Open Elastic Serverless → Dashboards (incl. **Metrics adoption — AI notes**) + Rules."
+echo "==> [5/6] Gaming index templates + ML auth-failure anomaly (this sandbox project)..."
+if [ "${WORKSHOP_SKIP_ML:-0}" = "1" ]; then
+  echo "    Skipping (WORKSHOP_SKIP_ML=1)."
+else
+  "${PY}" "${ROOT}/scripts/apply_aether_gaming_index_templates.py" \
+    || echo "    WARN: gaming index templates failed (ML can still use metrics-*)." >&2
+  "${PY}" "${ROOT}/scripts/create_aether_ml_anomaly_job.py" --start --skip-alert \
+    || echo "    WARN: ML job create/start failed (need ML privileges + metrics in metrics-*)." >&2
+fi
+
+echo "==> [6/6] Open Elastic Serverless → Dashboards (incl. **Metrics adoption — AI notes**) + ML → Anomaly Detection."
 echo "    Artifacts: ${OUT}/migration_report.json (or dashboards/), alert_comparison_results.json (or alerts/)"
+echo "    ML job: aether-auth-failure-anomaly (Machine Learning → Manage jobs)"
 echo "==> Done."

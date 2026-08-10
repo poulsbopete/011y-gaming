@@ -514,6 +514,23 @@ find "$TRACK_ROOT" -type f \( -name 'setup-es3-api' -o -name 'check-es3-api' -o 
 [[ -f "$TRACK_ROOT/scripts/demo_a2a_security_stub.sh" ]] && chmod +x "$TRACK_ROOT/scripts/demo_a2a_security_stub.sh"
 [[ -f "$TRACK_ROOT/scripts/ensure_ai_recommendation_panels.py" ]] && chmod +x "$TRACK_ROOT/scripts/ensure_ai_recommendation_panels.py"
 [[ -f "$TRACK_ROOT/scripts/deploy_workshop_workflows.py" ]] && chmod +x "$TRACK_ROOT/scripts/deploy_workshop_workflows.py"
+[[ -f "$TRACK_ROOT/scripts/apply_aether_gaming_index_templates.py" ]] && chmod +x "$TRACK_ROOT/scripts/apply_aether_gaming_index_templates.py"
+[[ -f "$TRACK_ROOT/scripts/create_aether_ml_anomaly_job.py" ]] && chmod +x "$TRACK_ROOT/scripts/create_aether_ml_anomaly_job.py"
+
+# ---------------------------------------------------------------------------
+# ML auth-failure anomaly on **this play's** Observability project (best-effort).
+# Needs metrics from the OTLP fleet; Lab 1 migrate + Lab 2 setup also re-run this.
+# ---------------------------------------------------------------------------
+if [ "${WORKSHOP_SKIP_ML:-0}" != "1" ] && [ "$PIPELINE_OK" = "1" ] && [ -n "${WORKSHOP_ES_API_KEY:-}" ]; then
+  echo "Waiting 60s for OTLP metrics, then creating ML job aether-auth-failure-anomaly..."
+  sleep 60
+  export ES_URL KIBANA_URL
+  export ES_API_KEY="$WORKSHOP_ES_API_KEY"
+  /opt/workshop-venv/bin/python3 "$TRACK_ROOT/scripts/apply_aether_gaming_index_templates.py" \
+    || echo "WARN: gaming index templates failed at track setup" >&2
+  /opt/workshop-venv/bin/python3 "$TRACK_ROOT/scripts/create_aether_ml_anomaly_job.py" --start --skip-alert \
+    || echo "WARN: ML job not ready yet (Lab 1 migrate / Lab 2 setup will retry)" >&2
+fi
 
 # ---------------------------------------------------------------------------
 # Agent Builder / Workflows prep (metrics-adoption AI notes on dashboards)

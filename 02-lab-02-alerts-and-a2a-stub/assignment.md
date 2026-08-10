@@ -72,29 +72,11 @@ difficulty: ""
 enhanced_loading: null
 ---
 
-**Lab goal:** publish alert drafts, run the A2A Security stub, and start the auth ML anomaly job.
+**Lab goal:** publish alert drafts, run the A2A Security stub, and ensure the auth ML anomaly job exists on **this** sandbox.
 
 ```bash
-# Refresh publisher from a pinned commit (avoids stale GitHub CDN), then run Lab 2.
-curl -fsSL https://raw.githubusercontent.com/poulsbopete/011y-gaming/main/tools/publish_grafana_alert_drafts_kibana.py \
-  -o /root/workshop/tools/publish_grafana_alert_drafts_kibana.py
-# Confirm you see publisher_version=… in the next command's output.
-grep -n publisher_version /root/workshop/tools/publish_grafana_alert_drafts_kibana.py | head -3
-# Optional: pull latest Lab 2 script (templates + ML) if the sandbox image is older than main.
-curl -fsSL https://raw.githubusercontent.com/poulsbopete/011y-gaming/main/scripts/publish_alerts_and_a2a_stub.sh \
-  -o /root/workshop/scripts/publish_alerts_and_a2a_stub.sh
-curl -fsSL https://raw.githubusercontent.com/poulsbopete/011y-gaming/main/scripts/apply_aether_gaming_index_templates.py \
-  -o /root/workshop/scripts/apply_aether_gaming_index_templates.py
-curl -fsSL https://raw.githubusercontent.com/poulsbopete/011y-gaming/main/scripts/create_aether_ml_anomaly_job.py \
-  -o /root/workshop/scripts/create_aether_ml_anomaly_job.py
-mkdir -p /root/workshop/assets/elasticsearch/templates
-curl -fsSL https://raw.githubusercontent.com/poulsbopete/011y-gaming/main/assets/elasticsearch/templates/aether-gaming-component-template.json \
-  -o /root/workshop/assets/elasticsearch/templates/aether-gaming-component-template.json
-curl -fsSL https://raw.githubusercontent.com/poulsbopete/011y-gaming/main/assets/elasticsearch/templates/aether-gaming-index-template.json \
-  -o /root/workshop/assets/elasticsearch/templates/aether-gaming-index-template.json
-curl -fsSL https://raw.githubusercontent.com/poulsbopete/011y-gaming/main/assets/elasticsearch/templates/aether-gaming-default-pipeline.json \
-  -o /root/workshop/assets/elasticsearch/templates/aether-gaming-default-pipeline.json
-chmod +x /root/workshop/scripts/publish_alerts_and_a2a_stub.sh
+# Lab 2 setup already refreshed scripts + created the ML job on this play's ES.
+# Re-run the publisher if you need alert drafts / A2A stub again:
 bash /root/workshop/scripts/publish_alerts_and_a2a_stub.sh
 ```
 
@@ -102,7 +84,7 @@ bash /root/workshop/scripts/publish_alerts_and_a2a_stub.sh
 
 - **Observability → Rules** — Aether alert drafts present (**disabled**)
 - Terminal output shows stub JSON at `build/a2a-stub/security-fraud-correlation.json`
-- **Machine Learning → Anomaly Detection** — job **`aether-auth-failure-anomaly`** (opened / datafeed started)
+- **Machine Learning → Manage jobs** — **`aether-auth-failure-anomaly`** (opened / datafeed started)
 - Optional: Dashboards / saved objects — **A2A federation preview**
 
 ## Done
