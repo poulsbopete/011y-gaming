@@ -56,5 +56,12 @@ If the Security alerts step is empty, confirm CPS linking and that alerts exist 
 ## Alert wiring (optional)
 
 The create script best-effort creates rule **Aether — auth failure ML anomaly**
-(`xpack.ml.anomaly_detection_alert`). Tag it `aether-games` / `ml` / `cps` so the
-workflow’s `alert` trigger can fire. You can also keep the 15m schedule + manual run.
+(`xpack.ml.anomaly_detection_alert`). To run this workflow when that rule fires:
+
+1. Ensure the workflow YAML has `triggers: […, { type: alert }]` with **no** `with` block
+   (alert triggers do not accept `rule_tags` — the schema rejects `Property with is not allowed`).
+2. Open the rule → **Actions** → **Add action** → **Workflows** → select
+   **Aether — ML anomaly → Security via CPS** (**Run Workflow**).
+3. Only **enabled** workflows appear in the picker.
+
+You can also keep the 15m schedule + manual **Run** for demos without alert attachment.

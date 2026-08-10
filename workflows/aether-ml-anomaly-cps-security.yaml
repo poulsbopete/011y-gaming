@@ -27,10 +27,9 @@ triggers:
   - type: scheduled
     with:
       every: "15m"
+  # Alert trigger has no `with` block — wire this workflow to a rule via
+  # Rules → Actions → Run Workflow (see docs/ml-anomaly-cps-security.md).
   - type: alert
-    with:
-      # Fires when the Aether ML anomaly alert rule creates an alert (if wired in Rules UI).
-      rule_tags: ["aether-games", "ml", "cps"]
 
 consts:
   security_cps_alias: "my-security-project-ac9463"
