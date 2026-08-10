@@ -3,7 +3,8 @@ slug: lab-02-alerts-and-a2a-stub
 id: xlfj91lntriu
 type: challenge
 title: Lab 2 — Alerts, A2A stub + ML auth anomaly
-teaser: Publish disabled gaming alerts, stub A2A Security, and start an ML auth-failure job.
+teaser: Publish disabled gaming alerts, stub A2A Security, and start an ML auth-failure
+  job.
 notes:
 - type: text
   contents: |
