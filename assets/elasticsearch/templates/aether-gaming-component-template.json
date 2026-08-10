@@ -1,0 +1,133 @@
+{
+  "template": {
+    "settings": {
+      "index": {
+        "number_of_shards": "1",
+        "number_of_replicas": "1",
+        "mapping.total_fields.limit": 2000,
+        "default_pipeline": "aether-gaming-default"
+      }
+    },
+    "mappings": {
+      "dynamic": "true",
+      "dynamic_templates": [
+        {
+          "strings_as_keywords": {
+            "match_mapping_type": "string",
+            "mapping": {
+              "type": "keyword",
+              "ignore_above": 1024
+            }
+          }
+        }
+      ],
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "event": {
+          "properties": {
+            "dataset": { "type": "keyword" },
+            "module": { "type": "keyword" },
+            "action": { "type": "keyword" },
+            "reason": { "type": "keyword" },
+            "severity": { "type": "keyword" },
+            "outcome": { "type": "keyword" }
+          }
+        },
+        "service": {
+          "properties": {
+            "name": { "type": "keyword" },
+            "environment": { "type": "keyword" },
+            "version": { "type": "keyword" }
+          }
+        },
+        "host": {
+          "properties": {
+            "name": { "type": "keyword" },
+            "hostname": { "type": "keyword" }
+          }
+        },
+        "cloud": {
+          "properties": {
+            "region": { "type": "keyword" },
+            "provider": { "type": "keyword" },
+            "availability_zone": { "type": "keyword" }
+          }
+        },
+        "region": { "type": "keyword" },
+        "user": {
+          "properties": {
+            "name": { "type": "keyword" },
+            "id": { "type": "keyword" }
+          }
+        },
+        "source": {
+          "properties": {
+            "ip": { "type": "ip" }
+          }
+        },
+        "device": {
+          "properties": {
+            "id": { "type": "keyword" }
+          }
+        },
+        "labels": {
+          "properties": {
+            "studio": { "type": "keyword" },
+            "game_title": { "type": "keyword" },
+            "platform": { "type": "keyword" },
+            "build": { "type": "keyword" },
+            "source": { "type": "keyword" }
+          }
+        },
+        "aether": {
+          "properties": {
+            "studio": { "type": "keyword" },
+            "title": { "type": "keyword" },
+            "mode": { "type": "keyword" }
+          }
+        },
+        "attributes": {
+          "properties": {
+            "result": { "type": "keyword" },
+            "severity": { "type": "keyword" },
+            "service": { "type": "keyword" },
+            "status": { "type": "keyword" },
+            "region": { "type": "keyword" },
+            "http.method": { "type": "keyword" },
+            "dependency": { "type": "keyword" },
+            "topic": { "type": "keyword" },
+            "slo": { "type": "keyword" }
+          }
+        },
+        "metricset": {
+          "properties": {
+            "name": { "type": "keyword" }
+          }
+        },
+        "message": { "type": "match_only_text" },
+        "log": {
+          "properties": {
+            "level": { "type": "keyword" }
+          }
+        },
+        "observer": {
+          "properties": {
+            "vendor": { "type": "keyword" },
+            "type": { "type": "keyword" }
+          }
+        },
+        "data_stream": {
+          "properties": {
+            "type": { "type": "constant_keyword" },
+            "dataset": { "type": "constant_keyword" },
+            "namespace": { "type": "constant_keyword" }
+          }
+        }
+      }
+    }
+  },
+  "_meta": {
+    "description": "Aether Games / gaming platform field mappings for ML influencers (service, region, auth result, anticheat severity).",
+    "managed_by": "011y-gaming"
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "description": "Normalize gaming attribute aliases for ML influencers (region, service.name, auth result).",
+  "processors": [
+    {
+      "set": {
+        "field": "event.dataset",
+        "value": "aether.gaming",
+        "override": false,
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "field": "event.module",
+        "value": "aether",
+        "override": false,
+        "ignore_failure": true
+      }
+    },
+    {
+      "rename": {
+        "field": "attributes.region",
+        "target_field": "region",
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "field": "cloud.region",
+        "copy_from": "region",
+        "override": false,
+        "ignore_empty_value": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "field": "service.name",
+        "copy_from": "attributes.service",
+        "override": false,
+        "ignore_empty_value": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "field": "labels.studio",
+        "value": "aether",
+        "override": false,
+        "ignore_failure": true
+      }
+    }
+  ],
+  "on_failure": [
+    {
+      "set": {
+        "field": "error.message",
+        "value": "{{ _ingest.on_failure_message }}",
+        "ignore_failure": true
+      }
+    }
+  ]
+}

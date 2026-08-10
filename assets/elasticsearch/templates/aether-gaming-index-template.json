@@ -1,0 +1,21 @@
+{
+  "index_patterns": ["aether-gaming-metrics-*", "metrics-aether.*", "aether-gaming-logs-*", "logs-aether.*"],
+  "data_stream": {},
+  "composed_of": ["aether-gaming-mappings"],
+  "priority": 500,
+  "template": {
+    "settings": {
+      "index": {
+        "mode": "standard"
+      }
+    },
+    "lifecycle": {
+      "data_retention": "30d"
+    }
+  },
+  "_meta": {
+    "description": "Gaming platform data streams for Aether Games workshop / custom ML plays (auth, matchmaking, anticheat, sessions).",
+    "managed_by": "011y-gaming",
+    "ml_jobs": ["aether-auth-failure-anomaly"]
+  }
+}

@@ -34,7 +34,7 @@ Dual deliverable for gaming platform POV conversations:
 
 1. **Lab 1** — migrate **14** gaming Grafana boards:  
    `bash /root/workshop/scripts/migrate_grafana_dashboards_to_serverless.sh`
-2. **Lab 2** — alert drafts + A2A Security stub:  
+2. **Lab 2** — alert drafts + A2A Security stub + **ML auth anomaly**:  
    `bash /root/workshop/scripts/publish_alerts_and_a2a_stub.sh`
 
 ### Bootstrap
@@ -92,6 +92,7 @@ Env vars: `VITE_KIBANA_URL`, `VITE_ES_URL`, `VITE_SECURITY_KIBANA_URL`, `VITE_SE
 - [`docs/a2a-security-stub.md`](docs/a2a-security-stub.md)
 - [`docs/loki-a2a-stub.md`](docs/loki-a2a-stub.md) — Loki LogQL via workflow (coexistence POV)
 - [`docs/ml-anomaly-cps-security.md`](docs/ml-anomaly-cps-security.md)
+- [`docs/gaming-index-templates.md`](docs/gaming-index-templates.md) — gaming index templates + custom ML play (Ade / Titov)
 
 ## Agent Builder workflows
 
@@ -107,6 +108,8 @@ Deployed by `scripts/deploy_workshop_workflows.py` (Lab 1 migrate + Lab 2 publis
 
 ML job helper: `scripts/create_aether_ml_anomaly_job.py` — see [`docs/ml-anomaly-cps-security.md`](docs/ml-anomaly-cps-security.md).
 
+Gaming index templates: `scripts/apply_aether_gaming_index_templates.py` — see [`docs/gaming-index-templates.md`](docs/gaming-index-templates.md).
+
 In Kibana: **Management → Workflows → Aether — dashboard briefs (Agent Builder) → Run**. Output lands in index `aether-dashboard-briefs` and Markdown **workshop-aether-dashboard-briefs**.
 
 ## Layout
@@ -117,8 +120,9 @@ track_scripts/
 01-lab-01-grafana-gaming-migrate/
 02-lab-02-alerts-and-a2a-stub/
 assets/grafana/          # 14 PromQL boards + alerts
+assets/elasticsearch/    # gaming index / component templates + ingest pipeline
 assets/alloy/
-scripts/                 # migrate, OTLP, A2A stub
+scripts/                 # migrate, OTLP, A2A stub, ML, templates
 tools/otel_gaming_fleet.py
 workflows/               # Agent Builder YAML (dashboard briefs + AI notes)
 demo/                    # Vite + React
