@@ -26,6 +26,8 @@ _refresh() {
 _refresh "tools/publish_grafana_alert_drafts_kibana.py"
 _refresh "scripts/publish_alerts_and_a2a_stub.sh"
 _refresh "scripts/demo_a2a_security_stub.sh"
+# Ensure demo stub is executable after refresh
+chmod +x "${WORKSHOP}/scripts/demo_a2a_security_stub.sh" 2>/dev/null || true
 _refresh "scripts/apply_aether_gaming_index_templates.py"
 _refresh "scripts/create_aether_ml_anomaly_job.py"
 _refresh "assets/elasticsearch/templates/aether-gaming-component-template.json"

@@ -89,12 +89,14 @@ echo "Wrote ${STUB_JSON}"
 echo "Wrote ${STUB_MD}"
 
 # Best-effort: create/update a markdown saved object in Kibana for facilitators.
+# Use absolute STUB_MD — sourcing ~/.bashrc can leave cwd outside $ROOT.
 if [ -n "${KIBANA_URL:-}" ] && { [ -n "${ES_API_KEY:-}" ] || [ -n "${KIBANA_API_KEY:-}" ]; }; then
   KEY="${KIBANA_API_KEY:-${ES_API_KEY}}"
-  BODY=$(python3 - <<'PY'
+  BODY=$(STUB_MD="${STUB_MD}" python3 - <<'PY'
 import json
+import os
 from pathlib import Path
-md = Path("build/a2a-stub/a2a-federation-preview.md").read_text()
+md = Path(os.environ["STUB_MD"]).read_text()
 print(json.dumps({
   "attributes": {
     "title": "Aether Games — A2A federation preview (stub)",
