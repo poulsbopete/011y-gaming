@@ -120,6 +120,9 @@ fi
 echo "    Patching cloud.region → region on uploaded Aether dashboards (OTLP fleet attribute)..."
 "${PY}" "${ROOT}/tools/patch_aether_dashboard_region_fields.py" --search Aether \
   || echo "    WARN: region field patch failed (region breakdown panels may error until re-run)." >&2
+echo "    Patching histogram ES|QL leftovers (_sum/_count / bare value) → gauge AVG forms..."
+"${PY}" "${ROOT}/tools/patch_aether_dashboard_esql_fields.py" --search Aether \
+  || echo "    WARN: ES|QL field patch failed (latency panels may still error)." >&2
 
 # Support both old layout (yaml/) and new (dashboards/yaml/) from newer mig-to-kbn.
 if [ -d "${OUT}/dashboards/yaml" ]; then

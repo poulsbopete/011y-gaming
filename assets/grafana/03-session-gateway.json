@@ -163,7 +163,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(http_request_duration_seconds_sum{service=\"session-gateway\"}[5m])) / sum(rate(http_request_duration_seconds_count{service=\"session-gateway\"}[5m]))",
+          "expr": "avg(http_request_duration_seconds{service=\"session-gateway\"})",
           "legendFormat": "",
           "refId": "A"
         }

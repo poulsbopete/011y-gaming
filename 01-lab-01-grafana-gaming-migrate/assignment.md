@@ -114,6 +114,10 @@ In **Elastic Serverless**:
 
 If panels are empty, re-pull the migrate script (Lab setup does this) and re-run Lab 1 — schema discovery needs `--es-url`.
 
+If panels error with `Unknown column` (`*_sum`, `*_count`, or `value`), restart the fleet and remigrate:
+
+`WORKSHOP_FORCE_OTEL_RESTART=1 bash scripts/migrate_grafana_dashboards_to_serverless.sh`
+
 ## Done
 
 **Check** passes when **`build/mig-grafana/`** has **14** `*.yaml` dashboard files.

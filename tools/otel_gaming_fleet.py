@@ -3,7 +3,11 @@
 Aether Games OTLP fleet — emit gaming + HTTP Prom-compatible metrics to local Alloy (:4318).
 
 Metrics align with assets/grafana/*.json PromQL so migrated Kibana panels light up.
-Uses Counter / UpDownCounter / Histogram only (broad OTel Python SDK support).
+
+Latency / ratio series use **gauges** (``.set``), not histograms. On Elastic Serverless,
+OTel histograms land as exponential-histogram fields (``value_$1`` / ``value_$2``) that
+break PromQL→ES|QL translations expecting ``*_sum`` / ``*_count`` or a bare ``value``.
+Gauges map to plain numeric fields that ``AVG`` / ``SUM`` ES|QL panels can query.
 """
 from __future__ import annotations
 
@@ -54,6 +58,7 @@ def _region_attrs(region: str, **extra: str) -> dict[str, str]:
     attrs.update(extra)
     return attrs
 
+
 _stop = False
 
 
@@ -77,6 +82,15 @@ def _setup_meter() -> metrics.Meter:
     return metrics.get_meter("aether.games.workshop", "1.0.0")
 
 
+def _require_gauge(meter: metrics.Meter, name: str, unit: str = "1"):
+    if not hasattr(meter, "create_gauge"):
+        raise RuntimeError(
+            "opentelemetry Meter.create_gauge is required (use a current OTel Python SDK). "
+            "Histograms break Serverless ES|QL panels for this workshop."
+        )
+    return meter.create_gauge(name, unit=unit)
+
+
 def main() -> int:
     signal.signal(signal.SIGTERM, _handle_sig)
     signal.signal(signal.SIGINT, _handle_sig)
@@ -85,10 +99,10 @@ def main() -> int:
     log.info("Exporting OTLP metrics → %s (interval=%ss)", OTLP_HTTP, INTERVAL)
 
     http_counter = meter.create_counter("http_requests_total", unit="1")
-    http_hist = meter.create_histogram("http_request_duration_seconds", unit="s")
+    http_latency = _require_gauge(meter, "http_request_duration_seconds", unit="s")
 
     mm_queue = meter.create_up_down_counter("aether_matchmaking_queue_depth", unit="1")
-    mm_wait = meter.create_histogram("aether_matchmaking_wait_seconds", unit="s")
+    mm_wait = _require_gauge(meter, "aether_matchmaking_wait_seconds", unit="s")
     mm_tickets = meter.create_counter("aether_matchmaking_tickets_total", unit="1")
     mm_matches = meter.create_counter("aether_matchmaking_matches_total", unit="1")
 
@@ -98,27 +112,27 @@ def main() -> int:
 
     auth_logins = meter.create_counter("aether_auth_logins_total", unit="1")
     store_checkouts = meter.create_counter("aether_store_checkouts_total", unit="1")
-    store_hist = meter.create_histogram("aether_store_checkout_duration_seconds", unit="s")
+    store_latency = _require_gauge(meter, "aether_store_checkout_duration_seconds", unit="s")
 
     chat_msgs = meter.create_counter("aether_chat_messages_total", unit="1")
     voice_sessions = meter.create_up_down_counter("aether_voice_sessions", unit="1")
-    slo_budget = meter.create_histogram("aether_slo_error_budget_remaining", unit="1")
+    slo_budget = _require_gauge(meter, "aether_slo_error_budget_remaining", unit="1")
 
     parties = meter.create_up_down_counter("aether_active_parties", unit="1")
     invites = meter.create_counter("aether_friend_invites_total", unit="1")
 
     presence_upd = meter.create_counter("aether_presence_updates_total", unit="1")
     presence_online = meter.create_up_down_counter("aether_presence_online_users", unit="1")
-    presence_lag = meter.create_histogram("aether_presence_fanout_lag_ms", unit="ms")
+    presence_lag = _require_gauge(meter, "aether_presence_fanout_lag_ms", unit="ms")
 
     entitlements = meter.create_counter("aether_entitlement_grants_total", unit="1")
-    entitlements_hist = meter.create_histogram("aether_entitlement_grant_duration_seconds", unit="s")
+    entitlements_latency = _require_gauge(meter, "aether_entitlement_grant_duration_seconds", unit="s")
 
     anticheat = meter.create_counter("aether_anticheat_signals_total", unit="1")
     anticheat_flagged = meter.create_up_down_counter("aether_anticheat_flagged_sessions", unit="1")
 
-    cdn_hit = meter.create_histogram("aether_cdn_cache_hit_ratio", unit="1")
-    dep_hist = meter.create_histogram("aether_dependency_duration_seconds", unit="s")
+    cdn_hit = _require_gauge(meter, "aether_cdn_cache_hit_ratio", unit="1")
+    dep_latency = _require_gauge(meter, "aether_dependency_duration_seconds", unit="s")
     kafka_lag = meter.create_up_down_counter("aether_kafka_consumer_lag", unit="1")
 
     region_players = {r: random.randint(8000, 40000) for r in REGIONS}
@@ -144,7 +158,7 @@ def main() -> int:
             status = random.choice(STATUSES)
             attrs = {"service": svc, "status": status, "http.method": "POST"}
             http_counter.add(random.randint(5, 80), attrs)
-            http_hist.record(random.uniform(0.01, 0.8), attrs)
+            http_latency.set(round(random.uniform(0.01, 0.8), 4), attrs)
 
         for r in REGIONS:
             delta = random.randint(-200, 400)
@@ -152,31 +166,31 @@ def main() -> int:
                 players.add(delta, _region_attrs(r))
                 region_players[r] += delta
             mm_queue.add(random.randint(-5, 12), _region_attrs(r, service="matchmaking"))
-            mm_wait.record(random.uniform(2.0, 45.0), _region_attrs(r))
+            mm_wait.set(round(random.uniform(2.0, 45.0), 3), _region_attrs(r))
             mm_tickets.add(random.randint(10, 60), _region_attrs(r))
             mm_matches.add(random.randint(5, 40), _region_attrs(r))
             presence_upd.add(random.randint(50, 200), _region_attrs(r))
-            presence_lag.record(random.uniform(5, 80), _region_attrs(r))
-            cdn_hit.record(random.uniform(0.82, 0.98), _region_attrs(r))
+            presence_lag.set(round(random.uniform(5, 80), 2), _region_attrs(r))
+            cdn_hit.set(round(random.uniform(0.82, 0.98), 4), _region_attrs(r))
             store_checkouts.add(random.randint(2, 25), _region_attrs(r, service="store"))
-            store_hist.record(random.uniform(0.1, 2.5), _region_attrs(r))
+            store_latency.set(round(random.uniform(0.1, 2.5), 3), _region_attrs(r))
 
         sessions.add(random.randint(-20, 50), {"service": "session-gateway"})
         auth_logins.add(random.randint(40, 120), {"result": "success", "service": "auth"})
         auth_logins.add(random.randint(1, 15), {"result": "failure", "service": "auth"})
         chat_msgs.add(random.randint(80, 300), {"service": "chat"})
         voice_sessions.add(random.randint(-5, 15), {"service": "voice"})
-        slo_budget.record(random.uniform(0.55, 0.98), {"slo": "launch-availability"})
+        slo_budget.set(round(random.uniform(0.55, 0.98), 4), {"slo": "launch-availability"})
         parties.add(random.randint(-10, 30), {"service": "party"})
         invites.add(random.randint(5, 40), {"service": "party"})
         presence_online.add(random.randint(-50, 100), {"service": "presence"})
         entitlements.add(random.randint(3, 30), {"service": "inventory"})
-        entitlements_hist.record(random.uniform(0.05, 0.6), {"service": "inventory"})
+        entitlements_latency.set(round(random.uniform(0.05, 0.6), 3), {"service": "inventory"})
         anticheat.add(random.randint(1, 8), {"severity": "low"})
         anticheat.add(random.randint(0, 3), {"severity": "high"})
         anticheat_flagged.add(random.randint(-2, 5), {"service": "anticheat"})
         for dep in ("postgres", "redis", "kafka"):
-            dep_hist.record(random.uniform(0.001, 0.15), {"dependency": dep})
+            dep_latency.set(round(random.uniform(0.001, 0.15), 4), {"dependency": dep})
         kafka_lag.add(random.randint(-100, 200), {"topic": "session-events"})
 
         if tick % 12 == 0:

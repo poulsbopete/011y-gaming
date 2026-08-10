@@ -122,7 +122,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(aether_entitlement_grant_duration_seconds_sum[5m])) / sum(rate(aether_entitlement_grant_duration_seconds_count[5m]))",
+          "expr": "avg(aether_entitlement_grant_duration_seconds)",
           "legendFormat": "",
           "refId": "A"
         }

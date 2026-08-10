@@ -122,7 +122,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(http_request_duration_seconds_sum{service=\"cdn-edge\"}[5m])) / sum(rate(http_request_duration_seconds_count{service=\"cdn-edge\"}[5m]))",
+          "expr": "avg(http_request_duration_seconds{service=\"cdn-edge\"})",
           "legendFormat": "",
           "refId": "A"
         }

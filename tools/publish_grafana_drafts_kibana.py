@@ -596,8 +596,8 @@ def _panel_esql_spec(
                 tf,
                 layer="line",
                 query=(
-                    f"FROM metrics-* | STATS m = SUM(`http_request_duration_seconds_sum`) / SUM(`http_request_duration_seconds_count`) "
-                    f"BY bucket = {q_b}, svc = {svc}"
+f"FROM metrics-* | STATS m = AVG(`http_request_duration_seconds`) "
+                                    f"BY bucket = {q_b}, svc = {svc}"
                 ),
                 x="bucket",
                 ys=[("m", None)],
@@ -718,7 +718,7 @@ def _panel_esql_spec(
             tf,
             layer="line",
             query=(
-                f"FROM metrics-* | STATS m = SUM(`http_request_duration_seconds_sum`) / SUM(`http_request_duration_seconds_count`) "
+                f"FROM metrics-* | STATS m = AVG(`http_request_duration_seconds`) "
                 f"BY bucket = {q_b}, e = `attributes.entity_id`"
             ),
             x="bucket",

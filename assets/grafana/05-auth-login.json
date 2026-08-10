@@ -163,7 +163,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(http_request_duration_seconds_sum{service=\"auth\"}[5m])) / sum(rate(http_request_duration_seconds_count{service=\"auth\"}[5m]))",
+          "expr": "avg(http_request_duration_seconds{service=\"auth\"})",
           "legendFormat": "",
           "refId": "A"
         }

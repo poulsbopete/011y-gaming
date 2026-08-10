@@ -163,8 +163,8 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(http_request_duration_seconds_sum{service=\"party\"}[5m])) / sum(rate(http_request_duration_seconds_count{service=\"party\"}[5m]))",
-          "legendFormat": "p95",
+          "expr": "avg(http_request_duration_seconds{service=\"party\"})",
+          "legendFormat": "avg",
           "refId": "A"
         }
       ],

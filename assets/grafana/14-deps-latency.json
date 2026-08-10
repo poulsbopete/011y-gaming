@@ -40,7 +40,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(aether_dependency_duration_seconds_sum{dependency=\"postgres\"}[5m])) / sum(rate(aether_dependency_duration_seconds_count{dependency=\"postgres\"}[5m]))",
+          "expr": "avg(aether_dependency_duration_seconds{dependency=\"postgres\"})",
           "legendFormat": "",
           "refId": "A"
         }
@@ -81,7 +81,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(aether_dependency_duration_seconds_sum{dependency=\"redis\"}[5m])) / sum(rate(aether_dependency_duration_seconds_count{dependency=\"redis\"}[5m]))",
+          "expr": "avg(aether_dependency_duration_seconds{dependency=\"redis\"})",
           "legendFormat": "",
           "refId": "A"
         }
@@ -163,7 +163,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(aether_dependency_duration_seconds_sum[5m])) by (dependency) / sum(rate(aether_dependency_duration_seconds_count[5m])) by (dependency)",
+          "expr": "avg(aether_dependency_duration_seconds) by (dependency)",
           "legendFormat": "{{dependency}}",
           "refId": "A"
         }
