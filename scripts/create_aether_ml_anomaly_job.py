@@ -7,8 +7,10 @@ Job: aether-auth-failure-anomaly
   - Influencers: service.name, region
   - Bucket span: 5m
 
-Also creates (optional) an anomaly detection alert rule that can trigger the
-Kibana workflow **Aether — ML anomaly → Security via CPS**.
+Also creates (optional) an anomaly detection alert rule for the Kibana workflow
+**Aether — ML anomaly → Security via CPS**. To fire that workflow on alert, attach
+**Run Workflow** on the rule's Actions (alert triggers only allow `type: alert` —
+no `with` / `rule_tags` in YAML).
 
 Env:
   ES_URL + ES_API_KEY (Observability project)
