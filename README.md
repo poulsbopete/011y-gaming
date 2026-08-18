@@ -14,6 +14,7 @@ Dual deliverable for gaming platform POV conversations:
 ## Value narrative
 
 - Consolidate Prometheus/Grafana dashboards, alerts, and Prom metrics into Elastic at a better price point
+- **Everyone hates broken widgets:** Grafana folders of launch-week boards; a relabel blanks matchmaking panels. Elastic inventories dashboards → indexes and alerts on schema drift
 - Account / platform fraud lives in Elastic Security; **CPS** (cross-project search) correlates Elastic Serverless projects; **A2A** federates non-Elastic solutions
 - Instruqt stands up **one** Observability Serverless project per play → Security federation is **stubbed** (A2A-shaped) in Lab 2
 
@@ -32,7 +33,7 @@ Dual deliverable for gaming platform POV conversations:
 
 ### Labs
 
-1. **Lab 1** — migrate **14** gaming Grafana boards:  
+1. **Lab 1** — migrate **14** gaming Grafana boards + deploy **Horizon — Dashboard sprawl**:  
    `bash /root/workshop/scripts/migrate_grafana_dashboards_to_serverless.sh`
 2. **Lab 2** — alert drafts + A2A Security stub + **ML auth anomaly**:  
    `bash /root/workshop/scripts/publish_alerts_and_a2a_stub.sh`
@@ -89,6 +90,7 @@ Env vars: `VITE_KIBANA_URL`, `VITE_ES_URL`, `VITE_SECURITY_KIBANA_URL`, `VITE_SE
 
 - [`docs/workshop-design.md`](docs/workshop-design.md)
 - [`docs/invite.md`](docs/invite.md)
+- [`docs/dashboard-sprawl.md`](docs/dashboard-sprawl.md) — broken widgets / schema-drift inventory
 - [`docs/a2a-security-stub.md`](docs/a2a-security-stub.md)
 - [`docs/loki-a2a-stub.md`](docs/loki-a2a-stub.md) — Loki LogQL via workflow (coexistence POV)
 - [`docs/ml-anomaly-cps-security.md`](docs/ml-anomaly-cps-security.md)
@@ -128,7 +130,7 @@ track_scripts/
 assets/grafana/          # 14 PromQL boards + alerts
 assets/elasticsearch/    # gaming index / component templates + ingest pipeline
 assets/alloy/
-scripts/                 # migrate, OTLP, A2A stub, ML, templates
+scripts/                 # migrate, OTLP, A2A stub, ML, templates, dashboard sprawl
 tools/otel_gaming_fleet.py
 workflows/               # Agent Builder YAML (dashboard briefs + AI notes)
 demo/                    # Vite + React

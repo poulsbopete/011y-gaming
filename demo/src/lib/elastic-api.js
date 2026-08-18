@@ -109,6 +109,21 @@ export function kibanaDashboardViewUrl(kibanaBase, dashboardId) {
 export const LOKI_STUB_DASH_AUTH = 'aether-loki-stub-auth-logs';
 export const LOKI_STUB_DASH_LAUNCH = 'aether-loki-stub-launch-window';
 
+/** Live otel-demo (and Instruqt after Lab 1 migrate) dashboard sprawl inventory. */
+export const HORIZON_SPRAWL_DASHBOARD_ID = 'horizon-dashboard-sprawl';
+export const DASHBOARD_SCHEMA_DRIFT_WORKFLOW_ID = 'dashboard-schema-drift-check';
+export const DASHBOARD_SCHEMA_DRIFT_RULE_ID = 'dashboard-schema-drift';
+
+export function kibanaWorkflowUrl(kibanaBase, workflowId) {
+  const base = (kibanaBase || getO11yKibanaUrl()).replace(/\/$/, '');
+  return `${base}/app/workflows/${encodeURIComponent(workflowId)}`;
+}
+
+export function kibanaManagementRuleUrl(kibanaBase, ruleId) {
+  const base = (kibanaBase || getO11yKibanaUrl()).replace(/\/$/, '');
+  return `${base}/app/management/insightsAndAlerting/triggersActions/rule/${encodeURIComponent(ruleId)}`;
+}
+
 export function kibanaStreamsUrl(kibanaBase) {
   const base = (kibanaBase || getO11yKibanaUrl()).replace(/\/$/, '');
   return `${base}/app/streams`;

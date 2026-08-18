@@ -8,7 +8,7 @@ Platform / SRE / observability owners at gaming companies consolidating Promethe
 
 - Brand the fictional studio **Aether Games** only
 - Never name real game publishers or titles in slides, assignments, or the Vercel demo
-- Lead with **metrics adoption** and cost/ops consolidation; fraud is a parallel Security story
+- Lead with **metrics adoption**, **broken widgets / dashboard sprawl**, and cost/ops consolidation; fraud is a parallel Security story
 
 ## Instruqt vs Vercel
 
@@ -21,11 +21,13 @@ Platform / SRE / observability owners at gaming companies consolidating Promethe
 ## Lab flow (~90–120 minutes)
 
 1. Open / framing (10m)
-2. Lab 1 migrate + verify dashboards (45–60m)
+2. Lab 1 migrate + verify dashboards + **Horizon — Dashboard sprawl** (45–60m)
 3. Lab 2 alerts + A2A stub walkthrough (20–30m)
-4. Optional: open Vercel demo Security links (10–15m)
+4. Optional: open Vercel demo Security + **Broken widgets** module (10–15m)
 5. Debrief (10m)
 
 ## Assets
 
 Fourteen Grafana JSON boards under `assets/grafana/` covering matchmaking, session gateway, regions, auth, store, voice/chat, SLO, party, presence, inventory, anti-cheat O11Y signals, CDN, and dependencies. Fleet emitter `tools/otel_gaming_fleet.py` emits matching metric names.
+
+After Lab 1 migrate, `scripts/deploy_dashboard_sprawl.py` inventories those boards → indexes (`dashboard-index-usage`, `dashboard-widget-fields`) and deploys **Horizon — Dashboard sprawl** plus the 15m **Dashboard schema drift check** workflow. Same board id as the fixed otel-demo POV (`horizon-dashboard-sprawl`).

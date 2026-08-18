@@ -58,6 +58,9 @@ notes:
     Migrate **14** Aether Games Grafana-shaped / PromQL boards (matchmaking, sessions, auth, store, SLO, …)
     with **`grafana-migrate`** onto live **`metrics-*`**.
 
+    Then open **Horizon — Dashboard sprawl**: which boards still query which indexes, and a schema-drift
+    workflow so a Prom relabel does not silently blank matchmaking widgets.
+
     Run **one command** in **Terminal** when the sandbox is ready.
 - type: text
   contents: |
@@ -109,8 +112,17 @@ bash /root/workshop/scripts/migrate_grafana_dashboards_to_serverless.sh
 In **Elastic Serverless**:
 
 - **Dashboards** — boards titled `Aether — …` on **`metrics-*`** (panels should show data after ~1–2 min of OTLP)
+- **Dashboards → Horizon — Dashboard sprawl** — which Aether boards still query which indexes; widget fields watched for schema drift
 - Scroll to the bottom of any Aether board for **AI Aether dashboard analysis** (Agent Builder), or open **Aether — AI notes**
 - **Machine Learning → Manage jobs** — **`aether-auth-failure-anomaly`** (created by Lab 1 migrate)
+
+If **Horizon — Dashboard sprawl** is missing after migrate:
+
+```bash
+python3 /root/workshop/scripts/deploy_dashboard_sprawl.py
+```
+
+Grafana shops accumulate launch-week folders nobody owns. A relabel or renamed duration metric **blanks widgets** — Elastic inventories boards → indexes and alerts when a `KEEP` probe fails.
 
 If AI strips are missing after migrate:
 

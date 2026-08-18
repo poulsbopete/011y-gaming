@@ -57,15 +57,15 @@ mkdir -p "${OUT}"
 
 WAIT_OTLP=0
 if [ "${WORKSHOP_SKIP_OTEL:-0}" = "1" ]; then
-  echo "==> [1/6] Skipping OTLP (WORKSHOP_SKIP_OTEL=1 — use only if telemetry is already in Elasticsearch)."
+  echo "==> [1/7] Skipping OTLP (WORKSHOP_SKIP_OTEL=1 — use only if telemetry is already in Elasticsearch)."
 elif [ "${WORKSHOP_FORCE_OTEL_RESTART:-0}" != "1" ] \
   && curl -sf --max-time 3 "http://127.0.0.1:12345/metrics" >/dev/null 2>&1 \
   && pgrep -f '[o]tel_gaming_fleet.py' >/dev/null 2>&1; then
-  echo "==> [1/6] OTLP already running (Alloy + Aether Games fleet). Skipping restart."
+  echo "==> [1/7] OTLP already running (Alloy + Aether Games fleet). Skipping restart."
   echo "    To force a full restart: WORKSHOP_FORCE_OTEL_RESTART=1 bash ${ROOT}/scripts/migrate_grafana_dashboards_to_serverless.sh"
   WAIT_OTLP=45
 else
-  echo "==> [1/6] OpenTelemetry pipeline (Alloy → Elastic mOTLP + Aether Games fleet)..."
+  echo "==> [1/7] OpenTelemetry pipeline (Alloy → Elastic mOTLP + Aether Games fleet)..."
   if ! "${ROOT}/scripts/start_workshop_otel.sh"; then
     echo "    ERROR: start_workshop_otel.sh failed (need ES_API_KEY and WORKSHOP_OTLP_ENDPOINT or derivable ES_URL/KIBANA_URL)." >&2
     exit 1
@@ -86,9 +86,9 @@ echo "    Restart emitters: WORKSHOP_FORCE_OTEL_RESTART=1 bash ${ROOT}/scripts/m
 ES_ES_ARGS=(--es-url "${ES_URL}" --es-api-key "${ES_API_KEY:-}")
 if [ "${WORKSHOP_MIG_ES_VALIDATE:-0}" = "1" ]; then
   ES_ES_ARGS+=(--validate)
-  echo "==> [2/6] grafana-migrate (schema discovery + live ES|QL validation)..."
+  echo "==> [2/7] grafana-migrate (schema discovery + live ES|QL validation)..."
 else
-  echo "==> [2/6] grafana-migrate (schema discovery via ES_URL; set WORKSHOP_MIG_ES_VALIDATE=1 for query validation)..."
+  echo "==> [2/7] grafana-migrate (schema discovery via ES_URL; set WORKSHOP_MIG_ES_VALIDATE=1 for query validation)..."
 fi
 
 # observability-migration-platform renamed --native-promql → --translation-mode native.
@@ -133,12 +133,12 @@ else
   echo "    YAML dashboards: ${n_yaml} (under ${OUT}/yaml/)"
 fi
 
-echo "==> [3/6] Publishing Grafana-derived rules from alert_comparison_results.json (disabled in Kibana by default)..."
+echo "==> [3/7] Publishing Grafana-derived rules from alert_comparison_results.json (disabled in Kibana by default)..."
 ALERT_COMPARISON="${OUT}/alert_comparison_results.json"
 [ -f "${OUT}/alerts/alert_comparison_results.json" ] && ALERT_COMPARISON="${OUT}/alerts/alert_comparison_results.json"
 "${PY}" "${ROOT}/tools/publish_grafana_alert_drafts_kibana.py" --comparison "${ALERT_COMPARISON}"
 
-echo "==> [4/6] Agent Builder Aether dashboard analysis (markdown panels + workflows)..."
+echo "==> [4/7] Agent Builder Aether dashboard analysis (markdown panels + workflows)..."
 if [ "${WORKSHOP_SKIP_AI_NOTES:-0}" = "1" ]; then
   echo "    Skipping (WORKSHOP_SKIP_AI_NOTES=1)."
 else
@@ -148,7 +148,7 @@ else
     || echo "    WARN: deploy_workshop_workflows.py failed (AI notes panels may still work via --seed-now)." >&2
 fi
 
-echo "==> [5/6] Gaming index templates + ML auth-failure anomaly (this sandbox project)..."
+echo "==> [5/7] Gaming index templates + ML auth-failure anomaly (this sandbox project)..."
 if [ "${WORKSHOP_SKIP_ML:-0}" = "1" ]; then
   echo "    Skipping (WORKSHOP_SKIP_ML=1)."
 else
@@ -158,8 +158,19 @@ else
     || echo "    WARN: ML job create/start failed (need ML privileges + metrics in metrics-*)." >&2
 fi
 
-echo "==> [6/6] Open Elastic Serverless → Dashboards (any **Aether — *** board + **Aether — AI notes**) + ML → Anomaly Detection."
+echo "==> [6/7] Dashboard sprawl inventory + schema-drift workflow (Horizon — Dashboard sprawl)..."
+if [ "${WORKSHOP_SKIP_SPRAWL:-0}" = "1" ]; then
+  echo "    Skipping (WORKSHOP_SKIP_SPRAWL=1)."
+else
+  export SPRAWL_COMPETITOR="${SPRAWL_COMPETITOR:-grafana}"
+  export SPRAWL_WITH_WORKFLOW="${SPRAWL_WITH_WORKFLOW:-1}"
+  "${PY}" "${ROOT}/scripts/deploy_dashboard_sprawl.py" \
+    || echo "    WARN: dashboard sprawl deploy failed (Aether boards still uploaded)." >&2
+fi
+
+echo "==> [7/7] Open Elastic Serverless → Dashboards (**Aether — *** + **Horizon — Dashboard sprawl**) + ML → Anomaly Detection."
 echo "    Artifacts: ${OUT}/migration_report.json (or dashboards/), alert_comparison_results.json (or alerts/)"
 echo "    ML job: aether-auth-failure-anomaly (Machine Learning → Manage jobs)"
 echo "    Re-seed AI analysis: python3 scripts/ensure_ai_recommendation_panels.py --platform grafana --seed-now"
+echo "    Sprawl: Dashboards → Horizon — Dashboard sprawl (or python3 scripts/deploy_dashboard_sprawl.py)"
 echo "==> Done."

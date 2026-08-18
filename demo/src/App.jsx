@@ -3,12 +3,14 @@ import { Menu, X } from 'lucide-react';
 import { LaunchNightDemo } from './components/LaunchNightDemo';
 import { WhyElasticSection } from './components/WhyElasticSection';
 import { MigrateSection } from './components/MigrateSection';
+import { DashboardSprawlLab } from './components/DashboardSprawlLab';
 import { FraudLab } from './components/FraudLab';
 import { ArchitectureSection } from './components/ArchitectureSection';
 import { getInstruqtInviteUrl } from './lib/elastic-api';
 
 const MODULES = [
   { id: 'launch', label: 'Launch night', live: true },
+  { id: 'sprawl', label: 'Broken widgets', live: true },
   { id: 'why', label: 'Why Elastic' },
   { id: 'migrate', label: 'Migrate' },
   { id: 'fraud', label: 'Fraud', live: true },
@@ -17,6 +19,7 @@ const MODULES = [
 
 const MODULE_COMPONENTS = {
   launch: LaunchNightDemo,
+  sprawl: DashboardSprawlLab,
   why: WhyElasticSection,
   migrate: MigrateSection,
   fraud: FraudLab,

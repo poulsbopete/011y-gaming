@@ -18,4 +18,6 @@ python3 /root/workshop/scripts/ensure_ai_recommendation_panels.py --platform gra
 WORKSHOP_FORCE_OTEL_RESTART=1 bash scripts/migrate_grafana_dashboards_to_serverless.sh
 ```
 
+**Dashboard sprawl:** Lab 1 migrate inventories live boards onto **Horizon — Dashboard sprawl** (`python3 scripts/deploy_dashboard_sprawl.py`). Punchline: everyone hates broken widgets — a Prom relabel blanks matchmaking panels; Elastic watches widget fields.
+
 **Security / fraud:** out of scope for Lab 1 — preview only in Lab 2 stub + Vercel demo.

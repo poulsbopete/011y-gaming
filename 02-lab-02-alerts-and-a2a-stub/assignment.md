@@ -86,6 +86,7 @@ bash /root/workshop/scripts/publish_alerts_and_a2a_stub.sh
 - Terminal output shows stub JSON at `build/a2a-stub/security-fraud-correlation.json`
 - **Machine Learning → Manage jobs** — **`aether-auth-failure-anomaly`** (opened / datafeed started)
 - Optional: Dashboards / saved objects — **A2A federation preview**
+- Optional: **Horizon — Dashboard sprawl** (deployed at end of Lab 1 migrate) — boards → indexes + schema-drift
 
 ## Done
 

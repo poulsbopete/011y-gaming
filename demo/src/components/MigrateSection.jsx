@@ -6,7 +6,7 @@ const POINTS = [
   {
     icon: Layers,
     title: 'Keep what you built',
-    body: 'Grafana dashboards, PromQL queries, and alerting rules — all kept. Elastic becomes the backend underneath: faster, cheaper, unified.',
+    body: 'Grafana dashboards, PromQL queries, and alerting rules — all kept. After migrate, Horizon inventories which boards still query which indexes so a relabel cannot silently blank widgets.',
   },
   {
     icon: Gauge,
