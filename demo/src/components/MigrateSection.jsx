@@ -6,7 +6,7 @@ const POINTS = [
   {
     icon: Layers,
     title: 'Keep what you built',
-    body: 'Grafana dashboards, PromQL queries, and alerting rules — all kept. After migrate, Horizon inventories which boards still query which indexes so a relabel cannot silently blank widgets.',
+    body: 'Grafana and Datadog boards, PromQL, and alerting intent come across. After cutover they live in Kibana — Horizon inventories which boards query which indexes so a relabel cannot silently leave widgets blank.',
   },
   {
     icon: Gauge,
@@ -16,7 +16,7 @@ const POINTS = [
   {
     icon: Wallet,
     title: 'Same-day cutover path',
-    body: 'Connect Grafana, auto-convert boards and rules, go live in Kibana — migrate overnight, not over quarters.',
+    body: 'Connect Grafana and Datadog, auto-convert boards and rules, go live on Observability Serverless — migrate overnight, not over quarters.',
   },
 ];
 
@@ -25,9 +25,9 @@ export function MigrateSection() {
   return (
     <div>
       <ModuleHeader
-        eyebrow="Prom → Elastic"
+        eyebrow="Grafana + Datadog → Elastic"
         title="Meet platform teams where they already work"
-        subtitle="Bring Aether Games Prom/Grafana assets into Elastic without a rewrite. Hands-on path is the Instruqt workshop."
+        subtitle="Bring Aether Games Grafana and Datadog boards into Observability Serverless without a rewrite. Hands-on path is the Instruqt workshop."
       />
       <div className="grid md:grid-cols-3 gap-8 mb-10">
         {POINTS.map(({ icon: Icon, title, body }) => (

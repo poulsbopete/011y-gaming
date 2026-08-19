@@ -2,13 +2,13 @@
 
 ## Audience
 
-Platform / SRE / observability owners at gaming companies consolidating Prometheus + Grafana into Elastic Observability. Secondary audience: security/fraud partners who need account abuse coverage.
+Platform / SRE / observability owners at gaming companies consolidating Prometheus + Grafana and Datadog into Elastic Observability Serverless. Secondary audience: security/fraud partners who need account abuse coverage.
 
 ## Narrative rules
 
 - Brand the fictional studio **Aether Games** only
 - Never name real game publishers or titles in slides, assignments, or the Vercel demo
-- Lead with **metrics adoption**, **broken widgets / dashboard sprawl**, and cost/ops consolidation; fraud is a parallel Security story
+- Lead with **metrics adoption**, **migrate then fix blank widgets in Elastic**, and cost/ops consolidation; fraud is a parallel Security story
 
 ## Instruqt vs Vercel
 

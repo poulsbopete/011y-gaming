@@ -1,8 +1,9 @@
 slug: aether-games-metrics-adoption
 id: tgsydt7gynld
 title: Aether Games — metrics adoption on Elastic
-teaser: Migrate PromQL/Grafana gaming metrics onto Observability Serverless, stub
-  A2A to Security, and run an auth-failure ML anomaly job.
+teaser: Migrate PromQL/Grafana (and Datadog-class) gaming metrics onto Observability
+  Serverless, then watch schema drift blank widgets in Kibana and remap them. Lab 2
+  stubs A2A to Security and runs an auth-failure ML anomaly job.
 description: |
   Aether Games workshop. Live OTLP → mOTLP, Kibana on :8080. Lab 1 migrates
   gaming-themed Grafana/PromQL dashboards via grafana-migrate. Lab 2 publishes

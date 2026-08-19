@@ -43,7 +43,7 @@ export function Hero() {
           Aether Games
         </h1>
         <p className="rise-in-delay mt-6 text-lg md:text-xl text-mist max-w-xl leading-relaxed">
-          Bring Prometheus metrics, Grafana dashboards, and alerts into Elastic — one plane for launch nights, at a better price point.
+          Bring Prometheus metrics, Grafana and Datadog dashboards, and alerts into Elastic — one plane for launch nights, at a better price point.
         </p>
         <div className="rise-in-delay mt-10 flex flex-wrap gap-3">
           <PrimaryCta href={o11y}>Open live Observability</PrimaryCta>

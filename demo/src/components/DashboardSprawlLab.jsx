@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { LayoutDashboard, AlertTriangle, Radio } from 'lucide-react';
+import { LayoutDashboard, AlertTriangle, Radio, CheckCircle2 } from 'lucide-react';
 import { ModuleHeader, StatCard, DeepLinkBar, PrimaryCta, GhostCta } from './ui';
 import {
   getO11yKibanaUrl,
@@ -14,20 +14,63 @@ import {
 } from '../lib/elastic-api';
 
 const FOLDER = [
-  { id: 'mm', title: 'Aether — Matchmaking', owner: 'unassigned', fields: 'wait_seconds, region' },
-  { id: 'sg', title: 'Aether — Session gateway', owner: 'platform', fields: 'http_request_duration_seconds' },
-  { id: 'auth', title: 'Aether — Auth & login', owner: 'identity', fields: 'aether_auth_logins_total' },
-  { id: 'store', title: 'Aether — Store checkout', owner: 'unassigned', fields: 'checkout_duration_seconds' },
-  { id: 'slo', title: 'Aether — Launch window SLO', owner: 'sre', fields: 'error_budget_remaining' },
-  { id: 'deps', title: 'Aether — Dependency latency', owner: 'unassigned', fields: 'dependency_duration_seconds' },
+  {
+    id: 'mm',
+    title: 'Aether — Matchmaking',
+    source: 'Grafana',
+    owner: 'unassigned',
+    fields: 'wait_seconds, region',
+    repairedFields: 'wait_seconds, labels.region',
+  },
+  {
+    id: 'sg',
+    title: 'Aether — Session gateway',
+    source: 'Datadog',
+    owner: 'platform',
+    fields: 'http_request_duration_seconds',
+    repairedFields: 'http.server.request.duration',
+  },
+  {
+    id: 'auth',
+    title: 'Aether — Auth & login',
+    source: 'Grafana',
+    owner: 'identity',
+    fields: 'aether_auth_logins_total',
+    repairedFields: 'aether_auth_logins_total',
+  },
+  {
+    id: 'store',
+    title: 'Aether — Store checkout',
+    source: 'Datadog',
+    owner: 'unassigned',
+    fields: 'checkout_duration_seconds',
+    repairedFields: 'checkout_duration_seconds',
+  },
+  {
+    id: 'slo',
+    title: 'Aether — Launch window SLO',
+    source: 'Grafana',
+    owner: 'sre',
+    fields: 'error_budget_remaining',
+    repairedFields: 'error_budget_remaining',
+  },
+  {
+    id: 'deps',
+    title: 'Aether — Dependency latency',
+    source: 'Datadog',
+    owner: 'unassigned',
+    fields: 'dependency_duration_seconds',
+    repairedFields: 'dependency.duration',
+  },
 ];
 
 const STEPS = [
-  { id: 'relabel', label: 'Relabel drops region / renames duration metric' },
-  { id: 'blank', label: 'Matchmaking + session widgets go blank' },
-  { id: 'page', label: 'SRE paged: “the dashboard is broken”' },
-  { id: 'inventory', label: 'Elastic inventory: boards → indexes they query' },
-  { id: 'probe', label: 'Workflow KEEP-probes widget fields every 15m' },
+  { id: 'migrate', label: 'Grafana + Datadog boards already live on Observability Serverless' },
+  { id: 'relabel', label: 'Schema change drops region / renames duration metric' },
+  { id: 'blank', label: 'Matchmaking + session widgets go blank in Kibana' },
+  { id: 'inventory', label: 'Horizon inventories each board → indexes + widget fields' },
+  { id: 'probe', label: 'Workflow KEEP-probes fields every 15m; drift alert fires' },
+  { id: 'repair', label: 'Remap broken queries to the new schema — widgets live again' },
 ];
 
 const statusColor = {
@@ -46,6 +89,7 @@ export function DashboardSprawlLab() {
 
   const [phase, setPhase] = useState('idle');
   const [blank, setBlank] = useState({});
+  const [repaired, setRepaired] = useState({});
   const [boards, setBoards] = useState(FOLDER.length);
   const [watched, setWatched] = useState(0);
   const [drift, setDrift] = useState(0);
@@ -66,91 +110,102 @@ export function DashboardSprawlLab() {
   useEffect(() => () => clearTimers(), []);
 
   function pushLog(msg) {
-    setLog((prev) => [`${new Date().toLocaleTimeString()}  ${msg}`, ...prev].slice(0, 8));
+    setLog((prev) => [`${new Date().toLocaleTimeString()}  ${msg}`, ...prev].slice(0, 10));
   }
 
   function reset() {
     clearTimers();
     setPhase('idle');
     setBlank({});
+    setRepaired({});
     setBoards(FOLDER.length);
     setWatched(0);
     setDrift(0);
     setSteps(STEPS.map((s) => ({ ...s, status: 'pending' })));
     setLog([]);
+  }
+
+  function markStep(doneIdx, runningIdx) {
+    setSteps((prev) =>
+      prev.map((s, i) => {
+        if (i === doneIdx) return { ...s, status: 'done' };
+        if (i === runningIdx) return { ...s, status: 'running' };
+        return s;
+      }),
+    );
   }
 
   function runBreakage() {
     clearTimers();
     setPhase('running');
     setBlank({});
+    setRepaired({});
     setBoards(FOLDER.length);
     setWatched(0);
     setDrift(0);
     setSteps(STEPS.map((s) => ({ ...s, status: 'pending' })));
     setLog([]);
-    pushLog('Launch week — Grafana folder still has last season’s boards');
-
-    schedule(() => {
-      setSteps((prev) => prev.map((s, i) => (i === 0 ? { ...s, status: 'running' } : s)));
-      pushLog('Prom relabel: drop label region; rename http_request_duration_seconds');
-    }, 700);
-
-    schedule(() => {
-      setBlank({ mm: true, sg: true, deps: true });
-      setSteps((prev) =>
-        prev.map((s, i) => (i === 0 ? { ...s, status: 'done' } : i === 1 ? { ...s, status: 'running' } : s)),
-      );
-      pushLog('WIDGET BLANK: Matchmaking wait by region — no data');
-      pushLog('WIDGET BLANK: Session gateway avg connect — Unknown column');
-    }, 1600);
-
-    schedule(() => {
-      setSteps((prev) =>
-        prev.map((s, i) => (i === 1 ? { ...s, status: 'done' } : i === 2 ? { ...s, status: 'running' } : s)),
-      );
-      pushLog('PAGE: #launch-sre — “the dashboard is broken” — not an index outage');
-    }, 2400);
 
     schedule(() => {
       setBoards(14);
+      setSteps((prev) => prev.map((s, i) => (i === 0 ? { ...s, status: 'running' } : s)));
+      pushLog('Cutover complete — Grafana + Datadog launch boards now Kibana on Observability Serverless');
+    }, 400);
+
+    schedule(() => {
+      markStep(0, 1);
+      pushLog('Schema change in metrics pipeline: drop label region; rename http_request_duration_seconds');
+    }, 1400);
+
+    schedule(() => {
+      setBlank({ mm: true, sg: true, deps: true });
+      markStep(1, 2);
+      pushLog('WIDGET BLANK (Kibana): Matchmaking wait by region — no data');
+      pushLog('WIDGET BLANK (Kibana): Session gateway avg connect — Unknown column');
+    }, 2300);
+
+    schedule(() => {
       setWatched(80);
-      setSteps((prev) =>
-        prev.map((s, i) => (i === 2 ? { ...s, status: 'done' } : i === 3 ? { ...s, status: 'running' } : s)),
-      );
-      pushLog('Elastic inventory: Aether boards → metrics-* (live dashboard definitions)');
-    }, 3400);
+      markStep(2, 3);
+      pushLog('Horizon inventory: Aether boards → metrics-* (live Kibana definitions, not Grafana/Datadog)');
+    }, 3300);
 
     schedule(() => {
       setDrift(3);
-      setSteps((prev) =>
-        prev.map((s, i) => {
-          if (i === 3) return { ...s, status: 'done' };
-          if (i === 4) return { ...s, status: 'running' };
-          return s;
-        }),
-      );
+      markStep(3, 4);
       pushLog('Workflow: FROM metrics-* | KEEP `region` | LIMIT 1 → on-failure → dashboard-schema-drift');
-    }, 4400);
+      pushLog('Alert: schema drift impacting 3 migrated widgets — throttle 1h');
+    }, 4300);
 
     schedule(() => {
+      markStep(4, 5);
+      pushLog('Repair: remap region → labels.region; duration → http.server.request.duration');
+    }, 5300);
+
+    schedule(() => {
+      setBlank({});
+      setRepaired({ mm: true, sg: true, deps: true });
+      setDrift(0);
       setSteps((prev) => prev.map((s) => ({ ...s, status: 'done' })));
       setPhase('done');
-      pushLog('Alert: schema drift impacting widgets — throttle 1h. Open Horizon — Dashboard sprawl');
-    }, 5400);
+      pushLog('Widgets restored on Elastic — matchmaking, session, deps live again. Open Horizon — Dashboard sprawl');
+    }, 6400);
   }
+
+  const blankCount = Object.keys(blank).length;
+  const repairedCount = Object.keys(repaired).length;
 
   return (
     <div>
       <ModuleHeader
         eyebrow="Broken widgets"
-        title="Launch-week boards. Then a relabel blanks them."
-        subtitle="Grafana folders nobody owns. A dropped region label or renamed duration metric silently empties matchmaking and session widgets. Elastic inventories which Aether boards still query which indexes — and alerts before SRE is paged for a blank graph."
+        title="Migrated into Elastic. Schema change blanks them. We remap here."
+        subtitle="Launch-week boards leave Grafana and Datadog for this Observability Serverless project. A dropped region label or renamed duration metric still empties matchmaking and session widgets — Elastic inventories which Aether boards query which indexes, alerts on drift, and remaps the broken queries so SRE is not staring at empty panels."
         actions={
           <div className="flex flex-wrap gap-3">
             <PrimaryCta onClick={phase === 'running' ? undefined : runBreakage} disabled={phase === 'running'}>
               <Radio className="w-4 h-4" />
-              Simulate schema break
+              Simulate break & repair
             </PrimaryCta>
             <GhostCta onClick={reset} disabled={phase === 'idle'}>
               Reset
@@ -170,12 +225,18 @@ export function DashboardSprawlLab() {
       </ModuleHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10 rise-in">
-        <StatCard label="Launch-week boards" value={boards} trend="Grafana folder + Kibana after migrate" />
+        <StatCard label="Migrated boards" value={boards} trend="Grafana + Datadog → Kibana" />
         <StatCard
           label="Blank widgets"
-          value={Object.keys(blank).length}
-          accent="amber"
-          trend={phase === 'idle' ? 'Healthy until relabel' : 'Matchmaking / session / deps'}
+          value={blankCount}
+          accent={blankCount ? 'amber' : undefined}
+          trend={
+            phase === 'idle'
+              ? 'Healthy after cutover'
+              : phase === 'done'
+                ? `${repairedCount} remapped in Elastic`
+                : 'Matchmaking / session / deps'
+          }
         />
         <StatCard
           label="Fields watched"
@@ -188,7 +249,7 @@ export function DashboardSprawlLab() {
           value={drift}
           accent={drift ? 'amber' : 'cyan'}
           href={ruleHref}
-          trend="KEEP probe failed (24h sim)"
+          trend={phase === 'done' ? 'KEEP probes passing after remap' : 'KEEP probe failed (24h sim)'}
         />
       </div>
 
@@ -196,7 +257,7 @@ export function DashboardSprawlLab() {
         <div className="lg:col-span-3">
           <div className="flex items-baseline justify-between gap-3 mb-4">
             <h2 className="font-display text-sm font-bold text-fog tracking-wide uppercase">
-              Grafana folder — launch week
+              Elastic Serverless — after migrate
             </h2>
             <span className="text-[10px] uppercase tracking-[0.14em] text-mist">
               {project}
@@ -205,6 +266,7 @@ export function DashboardSprawlLab() {
           <ul className="divide-y divide-white/8 border-t border-white/10">
             {FOLDER.map((b) => {
               const dead = Boolean(blank[b.id]);
+              const fixed = Boolean(repaired[b.id]);
               return (
                 <li key={b.id} className="py-3 flex items-start justify-between gap-4">
                   <div>
@@ -212,7 +274,9 @@ export function DashboardSprawlLab() {
                       {b.title}
                     </p>
                     <p className="text-[11px] text-mist mt-0.5 font-mono">
-                      {b.fields}
+                      {fixed ? b.repairedFields : b.fields}
+                      {' · from '}
+                      {b.source}
                       {b.owner === 'unassigned' ? ' · no owner' : ` · ${b.owner}`}
                     </p>
                   </div>
@@ -220,6 +284,11 @@ export function DashboardSprawlLab() {
                     <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wide text-amber shrink-0">
                       <AlertTriangle className="w-3.5 h-3.5" />
                       Blank
+                    </span>
+                  ) : fixed ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wide text-cyan shrink-0">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Remapped
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wide text-mist shrink-0">
@@ -233,8 +302,9 @@ export function DashboardSprawlLab() {
           </ul>
           <p className="text-xs text-mist mt-4 leading-relaxed max-w-lg">
             Simulation for the POV. Live inventory on{' '}
-            <span className="font-mono text-cyan">{project}</span> is rebuilt from dashboard
-            definitions — 242 boards on the fixed O11Y project, Aether boards on each Instruqt play.
+            <span className="font-mono text-cyan">{project}</span> is rebuilt from Kibana
+            dashboard definitions after migrate — 242 boards on the fixed O11Y project, Aether
+            boards on each Instruqt play.
           </p>
         </div>
 
@@ -257,7 +327,7 @@ export function DashboardSprawlLab() {
 
       <div className="border-t border-white/10 pt-4 font-mono text-[11px] text-mist space-y-1.5 min-h-[6.5rem]">
         {log.length === 0 ? (
-          <p className="text-mist/45">Event log — simulate a schema break</p>
+          <p className="text-mist/45">Event log — simulate schema break and remap in Elastic</p>
         ) : (
           log.map((line) => <p key={line}>{line}</p>)
         )}

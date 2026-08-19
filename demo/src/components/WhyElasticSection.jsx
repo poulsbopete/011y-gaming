@@ -4,7 +4,7 @@ import { Gauge, Layers, Wallet } from 'lucide-react';
 const STATS = [
   { value: '30×', label: 'Faster queries', detail: 'vs Prometheus & Mimir — ES 9.4 columnar metrics' },
   { value: '4×', label: 'Lower TCO', detail: 'vs Datadog-class metrics spend' },
-  { value: '0', label: 'Dashboard rewrites', detail: 'Keep Grafana boards, PromQL, alerting intent' },
+  { value: '0', label: 'Dashboard rewrites', detail: 'Keep layout, PromQL, alerting intent — live in Kibana' },
   { value: '3.75 B', label: 'Per data point', detail: 'Down from ~25 bytes — 6.6× less metrics storage' },
 ];
 
@@ -22,7 +22,7 @@ const PILLARS = [
   {
     icon: Wallet,
     title: 'Migrate overnight, not over quarters',
-    body: 'Connect Grafana, convert boards and rules automatically, go live in Kibana the same day — the Instruqt path.',
+    body: 'Connect Grafana and Datadog, convert boards and rules automatically, go live on Observability Serverless the same day — the Instruqt path.',
   },
 ];
 

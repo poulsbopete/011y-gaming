@@ -1,10 +1,10 @@
 # Dashboard sprawl and broken widgets
 
-Punchline: **everyone hates broken widgets.**
+Punchline: **migrate off Grafana and Datadog, then fix blank widgets in Elastic.**
 
-Grafana/Prom shops accumulate folders of launch-week boards nobody owns. Relabel, dropped labels, or a Prom upgrade silently blanks panels. Aether Games SREs get paged for “the dashboard is broken,” not a missing index.
+Aether Games cutovers launch-week boards into Observability Serverless. Relabel, dropped labels, or a renamed duration metric still blanks panels in Kibana — SREs get paged for “the dashboard is broken,” not a missing index.
 
-Elastic inventories dashboards → the indexes they query, watches widget fields, and alerts when a schema change would break a widget (`FROM index | KEEP \`field\` | LIMIT 1`).
+Elastic inventories those **migrated** dashboards → the indexes they query, watches widget fields, alerts when a schema change would break a widget (`FROM index | KEEP \`field\` | LIMIT 1`), and remaps the broken queries so widgets go live again.
 
 ## Live POV (otel-demo)
 
