@@ -9,7 +9,7 @@ You are invited to a hands-on workshop on adopting **metrics** on Elastic Observ
 **What you will do**
 
 1. Migrate gaming-themed Grafana / PromQL dashboards onto a live Observability Serverless project (one command)
-2. Open **Horizon — Dashboard sprawl** — after boards live in Elastic, inventory indexes + widget fields; detect schema drift and remap so a relabel does not leave matchmaking widgets blank
+2. Open **Horizon — Dashboard sprawl** — after boards live in Elastic, KEEP-probe widget fields when engineers change schema without warning; Agent Builder remaps so matchmaking widgets are not left blank
 3. Publish alert drafts (disabled) and review how **A2A** would federate to Elastic Security for account fraud — stubbed in-lab because we stand up one Serverless project at a time
 
 **Prep:** laptop + browser. No prior Elastic expertise required; Prometheus/Grafana familiarity helps.

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { LayoutDashboard, AlertTriangle, Radio, CheckCircle2 } from 'lucide-react';
+import { LayoutDashboard, AlertTriangle, Radio, Sparkles } from 'lucide-react';
 import { ModuleHeader, StatCard, DeepLinkBar, PrimaryCta, GhostCta } from './ui';
 import {
   getO11yKibanaUrl,
@@ -11,6 +11,7 @@ import {
   HORIZON_SPRAWL_DASHBOARD_ID,
   DASHBOARD_SCHEMA_DRIFT_WORKFLOW_ID,
   DASHBOARD_SCHEMA_DRIFT_RULE_ID,
+  AETHER_AI_NOTES_DASHBOARD_ID,
 } from '../lib/elastic-api';
 
 const FOLDER = [
@@ -65,12 +66,12 @@ const FOLDER = [
 ];
 
 const STEPS = [
-  { id: 'migrate', label: 'Grafana + Datadog boards already live on Observability Serverless' },
-  { id: 'relabel', label: 'Schema change drops region / renames duration metric' },
+  { id: 'live', label: 'Grafana + Datadog boards already live on Observability Serverless' },
+  { id: 'dev', label: 'Engineers ship a rename / drop a label — nobody filed a ticket' },
   { id: 'blank', label: 'Matchmaking + session widgets go blank in Kibana' },
-  { id: 'inventory', label: 'Horizon inventories each board → indexes + widget fields' },
-  { id: 'probe', label: 'Workflow KEEP-probes fields every 15m; drift alert fires' },
-  { id: 'repair', label: 'Remap broken queries to the new schema — widgets live again' },
+  { id: 'detect', label: 'KEEP probes fail; Horizon flags the fields those widgets still query' },
+  { id: 'ai', label: 'Agent Builder maps old fields → what is actually in the index' },
+  { id: 'repair', label: 'AI remaps the widget queries — panels live again' },
 ];
 
 const statusColor = {
@@ -85,6 +86,7 @@ export function DashboardSprawlLab() {
   const sprawlHref = kibanaDashboardViewUrl(kibana, HORIZON_SPRAWL_DASHBOARD_ID);
   const workflowHref = kibanaWorkflowUrl(kibana, DASHBOARD_SCHEMA_DRIFT_WORKFLOW_ID);
   const ruleHref = kibanaManagementRuleUrl(kibana, DASHBOARD_SCHEMA_DRIFT_RULE_ID);
+  const aiNotesHref = kibanaDashboardViewUrl(kibana, AETHER_AI_NOTES_DASHBOARD_ID);
   const listHref = kibanaDashboardsUrl(kibana);
 
   const [phase, setPhase] = useState('idle');
@@ -154,7 +156,7 @@ export function DashboardSprawlLab() {
 
     schedule(() => {
       markStep(0, 1);
-      pushLog('Schema change in metrics pipeline: drop label region; rename http_request_duration_seconds');
+      pushLog('Unexpected schema change: matchmaking drops `region`; session gateway renames duration — no changelog');
     }, 1400);
 
     schedule(() => {
@@ -166,21 +168,21 @@ export function DashboardSprawlLab() {
 
     schedule(() => {
       setWatched(80);
+      setDrift(3);
       markStep(2, 3);
-      pushLog('Horizon inventory: Aether boards → metrics-* (live Kibana definitions, not Grafana/Datadog)');
+      pushLog('DETECT: FROM metrics-* | KEEP `region` | LIMIT 1 → fail → dashboard-schema-drift');
+      pushLog('Horizon: 3 widgets still query fields that are no longer in the index');
     }, 3300);
 
     schedule(() => {
-      setDrift(3);
       markStep(3, 4);
-      pushLog('Workflow: FROM metrics-* | KEEP `region` | LIMIT 1 → on-failure → dashboard-schema-drift');
-      pushLog('Alert: schema drift impacting 3 migrated widgets — throttle 1h');
-    }, 4300);
+      pushLog('Agent Builder: `region` last present as `labels.region`; duration as `http.server.request.duration`');
+    }, 4400);
 
     schedule(() => {
       markStep(4, 5);
-      pushLog('Repair: remap region → labels.region; duration → http.server.request.duration');
-    }, 5300);
+      pushLog('AI remapping widget ES|QL on Matchmaking, Session gateway, Dependency latency');
+    }, 5400);
 
     schedule(() => {
       setBlank({});
@@ -188,8 +190,8 @@ export function DashboardSprawlLab() {
       setDrift(0);
       setSteps((prev) => prev.map((s) => ({ ...s, status: 'done' })));
       setPhase('done');
-      pushLog('Widgets restored on Elastic — matchmaking, session, deps live again. Open Horizon — Dashboard sprawl');
-    }, 6400);
+      pushLog('KEEP probes passing — 3 widgets restored by AI. Open Aether — AI notes');
+    }, 6500);
   }
 
   const blankCount = Object.keys(blank).length;
@@ -199,13 +201,13 @@ export function DashboardSprawlLab() {
     <div>
       <ModuleHeader
         eyebrow="Broken widgets"
-        title="Migrated into Elastic. Schema change blanks them. We remap here."
-        subtitle="Launch-week boards leave Grafana and Datadog for this Observability Serverless project. A dropped region label or renamed duration metric still empties matchmaking and session widgets — Elastic inventories which Aether boards query which indexes, alerts on drift, and remaps the broken queries so SRE is not staring at empty panels."
+        title="Developers change schema. Elastic detects it. AI remaps the widgets."
+        subtitle="Schema changes are not in the launch plan — but game and platform engineers rename metrics and drop labels all the time. After Grafana and Datadog boards live on Observability Serverless, KEEP probes catch the blank widgets; Agent Builder maps old fields to what is actually in the index and remaps the queries."
         actions={
           <div className="flex flex-wrap gap-3">
             <PrimaryCta onClick={phase === 'running' ? undefined : runBreakage} disabled={phase === 'running'}>
               <Radio className="w-4 h-4" />
-              Simulate break & repair
+              Simulate a silent schema change
             </PrimaryCta>
             <GhostCta onClick={reset} disabled={phase === 'idle'}>
               Reset
@@ -218,6 +220,7 @@ export function DashboardSprawlLab() {
           links={[
             { label: 'Horizon — Dashboard sprawl', href: sprawlHref, primary: true },
             { label: 'Schema drift workflow', href: workflowHref },
+            { label: 'Aether — AI notes', href: aiNotesHref },
             { label: 'Drift alert rule', href: ruleHref },
             { label: 'All dashboards', href: listHref },
           ]}
@@ -234,7 +237,7 @@ export function DashboardSprawlLab() {
             phase === 'idle'
               ? 'Healthy after cutover'
               : phase === 'done'
-                ? `${repairedCount} remapped in Elastic`
+                ? `${repairedCount} remapped by AI`
                 : 'Matchmaking / session / deps'
           }
         />
@@ -249,7 +252,7 @@ export function DashboardSprawlLab() {
           value={drift}
           accent={drift ? 'amber' : 'cyan'}
           href={ruleHref}
-          trend={phase === 'done' ? 'KEEP probes passing after remap' : 'KEEP probe failed (24h sim)'}
+          trend={phase === 'done' ? 'KEEP probes passing after AI remap' : 'Unexpected — KEEP probe failed'}
         />
       </div>
 
@@ -287,8 +290,8 @@ export function DashboardSprawlLab() {
                     </span>
                   ) : fixed ? (
                     <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wide text-cyan shrink-0">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      Remapped
+                      <Sparkles className="w-3.5 h-3.5" />
+                      AI remapped
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wide text-mist shrink-0">
@@ -301,16 +304,15 @@ export function DashboardSprawlLab() {
             })}
           </ul>
           <p className="text-xs text-mist mt-4 leading-relaxed max-w-lg">
-            Simulation for the POV. Live inventory on{' '}
-            <span className="font-mono text-cyan">{project}</span> is rebuilt from Kibana
-            dashboard definitions after migrate — 242 boards on the fixed O11Y project, Aether
-            boards on each Instruqt play.
+            Simulation for the POV. Detection is the KEEP probe + Horizon inventory on{' '}
+            <span className="font-mono text-cyan">{project}</span>. Remap is Agent Builder
+            (Aether — AI notes) against live Kibana dashboard definitions.
           </p>
         </div>
 
         <div className="lg:col-span-2">
           <h2 className="font-display text-sm font-bold text-fog tracking-wide uppercase mb-4">
-            Elastic response
+            Detect + AI remap
           </h2>
           <ol className="space-y-3">
             {steps.map((s, i) => (
@@ -327,7 +329,7 @@ export function DashboardSprawlLab() {
 
       <div className="border-t border-white/10 pt-4 font-mono text-[11px] text-mist space-y-1.5 min-h-[6.5rem]">
         {log.length === 0 ? (
-          <p className="text-mist/45">Event log — simulate schema break and remap in Elastic</p>
+          <p className="text-mist/45">Event log — unexpected schema change, then AI remap</p>
         ) : (
           log.map((line) => <p key={line}>{line}</p>)
         )}

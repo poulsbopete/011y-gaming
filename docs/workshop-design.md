@@ -8,7 +8,7 @@ Platform / SRE / observability owners at gaming companies consolidating Promethe
 
 - Brand the fictional studio **Aether Games** only
 - Never name real game publishers or titles in slides, assignments, or the Vercel demo
-- Lead with **metrics adoption**, **migrate then fix blank widgets in Elastic**, and cost/ops consolidation; fraud is a parallel Security story
+- Lead with **metrics adoption**, **unexpected schema changes → detect + AI remap**, and cost/ops consolidation; fraud is a parallel Security story
 
 ## Instruqt vs Vercel
 

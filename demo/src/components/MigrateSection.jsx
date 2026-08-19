@@ -6,7 +6,7 @@ const POINTS = [
   {
     icon: Layers,
     title: 'Keep what you built',
-    body: 'Grafana and Datadog boards, PromQL, and alerting intent come across. After cutover they live in Kibana — Horizon inventories which boards query which indexes so a relabel cannot silently leave widgets blank.',
+    body: 'Grafana and Datadog boards, PromQL, and alerting intent come across. After cutover they live in Kibana. When engineers unexpectedly rename a field, Horizon + KEEP probes detect the blank widgets and Agent Builder remaps the queries.',
   },
   {
     icon: Gauge,

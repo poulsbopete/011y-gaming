@@ -122,7 +122,7 @@ If **Horizon — Dashboard sprawl** is missing after migrate:
 python3 /root/workshop/scripts/deploy_dashboard_sprawl.py
 ```
 
-After cutover, boards live in Elastic — not Grafana or Datadog. A relabel or renamed duration metric still **blanks widgets** in Kibana. Elastic inventories boards → indexes, alerts when a `KEEP` probe fails, and remaps the broken queries.
+After cutover, boards live in Elastic — not Grafana or Datadog. Engineers still **change schema without warning**, which blanks widgets in Kibana. Elastic inventories boards → indexes, alerts when a `KEEP` probe fails, and Agent Builder remaps the broken queries.
 
 If AI strips are missing after migrate:
 

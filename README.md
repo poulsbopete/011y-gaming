@@ -14,7 +14,7 @@ Dual deliverable for gaming platform POV conversations:
 ## Value narrative
 
 - Consolidate Prometheus/Grafana **and Datadog** dashboards, alerts, and metrics into Elastic Observability Serverless at a better price point
-- **Everyone hates broken widgets:** after migrate, a relabel still blanks matchmaking panels in Kibana. Elastic inventories dashboards → indexes, alerts on schema drift, and remaps the broken queries
+- **Everyone hates broken widgets:** engineers change schema without warning. After migrate, Elastic KEEP-probes detect blank Kibana widgets and Agent Builder remaps the queries
 - Account / platform fraud lives in Elastic Security; **CPS** (cross-project search) correlates Elastic Serverless projects; **A2A** federates non-Elastic solutions
 - Instruqt stands up **one** Observability Serverless project per play → Security federation is **stubbed** (A2A-shaped) in Lab 2
 

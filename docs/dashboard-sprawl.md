@@ -1,16 +1,17 @@
 # Dashboard sprawl and broken widgets
 
-Punchline: **migrate off Grafana and Datadog, then fix blank widgets in Elastic.**
+Punchline: **developers change schema; Elastic detects it; AI remaps the widgets.**
 
-Aether Games cutovers launch-week boards into Observability Serverless. Relabel, dropped labels, or a renamed duration metric still blanks panels in Kibana — SREs get paged for “the dashboard is broken,” not a missing index.
+Schema changes are not planned — game and platform engineers rename metrics and drop labels anyway. After Grafana/Datadog boards live on Observability Serverless, that silently blanks panels in Kibana.
 
-Elastic inventories those **migrated** dashboards → the indexes they query, watches widget fields, alerts when a schema change would break a widget (`FROM index | KEEP \`field\` | LIMIT 1`), and remaps the broken queries so widgets go live again.
+Elastic inventories those **migrated** dashboards → the indexes they query, KEEP-probes widget fields (`FROM index | KEEP \`field\` | LIMIT 1`), and Agent Builder maps old fields to what is actually in the index so widgets go live again.
 
 ## Live POV (otel-demo)
 
 | Surface | URL |
 | --- | --- |
 | Dashboard **Horizon — Dashboard sprawl** | https://otel-demo-a5630c.kb.us-east-1.aws.elastic.cloud/app/dashboards#/view/horizon-dashboard-sprawl |
+| Dashboard **Aether — AI notes** | https://otel-demo-a5630c.kb.us-east-1.aws.elastic.cloud/app/dashboards#/view/workshop-aether-ai-notes |
 | Workflow **Dashboard schema drift check** | https://otel-demo-a5630c.kb.us-east-1.aws.elastic.cloud/app/workflows/dashboard-schema-drift-check |
 | Alert **Dashboard schema drift** | https://otel-demo-a5630c.kb.us-east-1.aws.elastic.cloud/app/management/insightsAndAlerting/triggersActions/rule/dashboard-schema-drift |
 
@@ -32,4 +33,4 @@ Open **Dashboards → Horizon — Dashboard sprawl** on the play’s Kibana (`:8
 
 ## Vercel demo
 
-Module **Broken widgets** deep-links the otel-demo board, workflow, and alert.
+Module **Broken widgets** deep-links Horizon, the schema-drift workflow/alert, and **Aether — AI notes**.
