@@ -10,6 +10,39 @@ import { randomBytes } from 'node:crypto';
 
 const SERVICES = ['matchmaking', 'auth', 'session-gateway', 'store', 'aether-games-fleet'];
 
+const HTTP_ROUTES = {
+  matchmaking: [
+    ['POST', '/v1/matchmaking/tickets'],
+    ['GET', '/v1/matchmaking/queue'],
+    ['POST', '/v1/matchmaking/ready'],
+    ['DELETE', '/v1/matchmaking/tickets'],
+  ],
+  auth: [
+    ['POST', '/v1/auth/login'],
+    ['POST', '/v1/auth/refresh'],
+    ['GET', '/v1/auth/session'],
+  ],
+  'session-gateway': [
+    ['POST', '/v1/sessions'],
+    ['GET', '/v1/sessions/active'],
+    ['POST', '/v1/sessions/heartbeat'],
+  ],
+  store: [
+    ['POST', '/v1/store/checkout'],
+    ['GET', '/v1/store/catalog'],
+    ['POST', '/v1/store/entitlements'],
+  ],
+};
+
+const SPANS_PER_SERVICE = {
+  matchmaking: 450,
+  auth: 280,
+  'session-gateway': 280,
+  store: 220,
+};
+
+const WAVES = 3;
+
 function json(res, status, body) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json');
@@ -33,6 +66,14 @@ function hexId(bytes) {
   return randomBytes(bytes).toString('hex');
 }
 
+function randInt(min, max) {
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
 function buildMetricsPayload() {
   const t = nowNano();
   const resourceMetrics = SERVICES.map((svc) => {
@@ -44,7 +85,7 @@ function buildMetricsPayload() {
           isMonotonic: true,
           dataPoints: [
             {
-              asDouble: 40 + Math.floor(Math.random() * 60),
+              asDouble: 400 + Math.floor(Math.random() * 600),
               timeUnixNano: t,
               attributes: [
                 { key: 'http.method', value: { stringValue: 'POST' } },
@@ -63,9 +104,9 @@ function buildMetricsPayload() {
             {
               startTimeUnixNano: t,
               timeUnixNano: t,
-              count: '12',
-              sum: 240 + Math.random() * 80,
-              bucketCounts: ['2', '4', '3', '2', '1'],
+              count: `${randInt(80, 180)}`,
+              sum: 2400 + Math.random() * 800,
+              bucketCounts: ['20', '40', '30', '20', '10'],
               explicitBounds: [50, 100, 200, 500],
               attributes: [{ key: 'http.route', value: { stringValue: `/${svc}` } }],
             },
@@ -96,7 +137,7 @@ function buildMetricsPayload() {
           isMonotonic: true,
           dataPoints: [
             {
-              asDouble: 40 + Math.floor(Math.random() * 80),
+              asDouble: 200 + Math.floor(Math.random() * 180),
               timeUnixNano: t,
               attributes: [{ key: 'result', value: { stringValue: 'success' } }],
             },
@@ -134,12 +175,71 @@ function buildMetricsPayload() {
   return { resourceMetrics };
 }
 
+function spanTimes(nowMs) {
+  const windowMs = Math.random() < 0.72 ? 2 * 3600_000 : 24 * 3600_000;
+  const endMs = nowMs - randInt(0, windowMs);
+  return endMs;
+}
+
+function durationMs(svc) {
+  if (svc === 'matchmaking') {
+    return Math.random() < 0.14 ? randInt(80, 420) : randInt(3, 28);
+  }
+  if (svc === 'session-gateway') return randInt(4, 45);
+  if (svc === 'auth') return randInt(2, 35);
+  return randInt(8, 60);
+}
+
 function buildTracesPayload() {
-  const end = BigInt(Date.now()) * 1000000n;
+  const nowMs = Date.now();
   const resourceSpans = SERVICES.filter((s) => s !== 'aether-games-fleet').map((svc) => {
-    const start = end - BigInt(5_000_000 + Math.floor(Math.random() * 40_000_000));
-    const traceId = hexId(16);
-    const spanId = hexId(8);
+    const routes = HTTP_ROUTES[svc];
+    const count = SPANS_PER_SERVICE[svc] || 200;
+    const spans = [];
+
+    for (let i = 0; i < count; i++) {
+      const [method, route] = pick(routes);
+      const failed = Math.random() < (svc === 'auth' ? 0.06 : 0.035);
+      const status = failed ? 500 : 200;
+      const endMs = spanTimes(nowMs);
+      const dur = durationMs(svc);
+      const startMs = endMs - dur;
+      const traceId = hexId(16);
+      const spanId = hexId(8);
+      const startNano = `${BigInt(startMs) * 1000000n}`;
+      const endNano = `${BigInt(endMs) * 1000000n}`;
+
+      spans.push({
+        traceId,
+        spanId,
+        name: `${method} ${route}`,
+        kind: 2,
+        startTimeUnixNano: startNano,
+        endTimeUnixNano: endNano,
+        attributes: [
+          { key: 'http.method', value: { stringValue: method } },
+          { key: 'http.request.method', value: { stringValue: method } },
+          { key: 'http.route', value: { stringValue: route } },
+          { key: 'url.path', value: { stringValue: route } },
+          { key: 'http.status_code', value: { intValue: String(status) } },
+          { key: 'http.response.status_code', value: { intValue: String(status) } },
+        ],
+        status: { code: failed ? 2 : 1 },
+      });
+
+      spans.push({
+        traceId,
+        spanId: hexId(8),
+        parentSpanId: spanId,
+        name: `${svc}.db`,
+        kind: 3,
+        startTimeUnixNano: `${BigInt(startMs) * 1000000n + 500000n}`,
+        endTimeUnixNano: `${BigInt(endMs) * 1000000n - 200000n}`,
+        attributes: [{ key: 'db.system', value: { stringValue: 'postgresql' } }],
+        status: { code: 1 },
+      });
+    }
+
     return {
       resource: {
         attributes: [
@@ -148,38 +248,7 @@ function buildTracesPayload() {
           { key: 'telemetry.sdk.language', value: { stringValue: 'nodejs' } },
         ],
       },
-      scopeSpans: [
-        {
-          scope: { name: 'aether.games.vercel', version: '1.0.0' },
-          spans: [
-            {
-              traceId,
-              spanId,
-              name: `${svc}.request`,
-              kind: 2,
-              startTimeUnixNano: `${start}`,
-              endTimeUnixNano: `${end}`,
-              attributes: [
-                { key: 'http.method', value: { stringValue: 'POST' } },
-                { key: 'http.route', value: { stringValue: `/${svc}` } },
-                { key: 'http.status_code', value: { intValue: '200' } },
-              ],
-              status: { code: 1 },
-            },
-            {
-              traceId,
-              spanId: hexId(8),
-              parentSpanId: spanId,
-              name: `${svc}.db`,
-              kind: 3,
-              startTimeUnixNano: `${start + 1000000n}`,
-              endTimeUnixNano: `${end - 500000n}`,
-              attributes: [{ key: 'db.system', value: { stringValue: 'postgresql' } }],
-              status: { code: 1 },
-            },
-          ],
-        },
-      ],
+      scopeSpans: [{ scope: { name: 'aether.games.vercel', version: '1.0.0' }, spans }],
     };
   });
 
@@ -220,6 +289,8 @@ export default async function handler(req, res) {
       configured,
       ingest: configured ? ingest.replace(/https?:\/\//, '') : null,
       services: SERVICES,
+      tracesPerWave: SPANS_PER_SERVICE,
+      waves: WAVES,
     });
     return;
   }
@@ -237,14 +308,30 @@ export default async function handler(req, res) {
   }
 
   try {
-    const metrics = await postOtlp(`${ingest}/v1/metrics`, apiKey, buildMetricsPayload());
-    const traces = await postOtlp(`${ingest}/v1/traces`, apiKey, buildTracesPayload());
+    let metricsOk = 0;
+    let tracesOk = 0;
+    let lastMetrics;
+    let lastTraces;
+    let spanTotal = 0;
 
-    if (!metrics.ok && !traces.ok) {
+    for (let wave = 0; wave < WAVES; wave++) {
+      const metricsPayload = buildMetricsPayload();
+      const tracesPayload = buildTracesPayload();
+      spanTotal += tracesPayload.resourceSpans.reduce(
+        (n, rs) => n + (rs.scopeSpans?.[0]?.spans?.length || 0),
+        0,
+      );
+      lastMetrics = await postOtlp(`${ingest}/v1/metrics`, apiKey, metricsPayload);
+      lastTraces = await postOtlp(`${ingest}/v1/traces`, apiKey, tracesPayload);
+      if (lastMetrics.ok) metricsOk += 1;
+      if (lastTraces.ok) tracesOk += 1;
+    }
+
+    if (metricsOk === 0 && tracesOk === 0) {
       json(res, 502, {
         error: 'OTLP ingest failed for metrics and traces',
-        metrics,
-        traces,
+        metrics: lastMetrics,
+        traces: lastTraces,
         endpoint: ingest.replace(/https?:\/\//, ''),
       });
       return;
@@ -252,11 +339,15 @@ export default async function handler(req, res) {
 
     json(res, 200, {
       ok: true,
-      message: 'Seeded Aether metrics + traces (matchmaking, auth, session-gateway, store).',
-      metrics: { ok: metrics.ok, status: metrics.status },
-      traces: { ok: traces.ok, status: traces.status, body: traces.ok ? undefined : traces.body },
+      message: `Seeded ${spanTotal} spans across ${WAVES} waves (matchmaking, auth, session-gateway, store).`,
+      metrics: { okWaves: metricsOk, lastStatus: lastMetrics?.status },
+      traces: {
+        okWaves: tracesOk,
+        lastStatus: lastTraces?.status,
+        body: lastTraces?.ok ? undefined : lastTraces?.body,
+      },
       services: SERVICES.filter((s) => s !== 'aether-games-fleet'),
-      hint: 'Wait ~30–60s, then open APM Services or Discover in the O11Y project.',
+      hint: 'Wait ~30–60s, then refresh APM Transactions (Last 24h). Most volume is in the last 2 hours.',
     });
   } catch (err) {
     json(res, 500, { error: err instanceof Error ? err.message : String(err) });

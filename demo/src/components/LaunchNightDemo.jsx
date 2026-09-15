@@ -167,7 +167,7 @@ export function LaunchNightDemo() {
         pushLog(`Seed failed: ${body.error || r.status}`);
         return;
       }
-      pushLog(`Seeded metrics+traces → ${project} (wait ~30s, then open APM)`);
+      pushLog(`Seeded ${body.message || 'metrics+traces'} → ${project} (wait ~30s, then refresh APM)`);
     } catch (e) {
       pushLog(`Seed error: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
