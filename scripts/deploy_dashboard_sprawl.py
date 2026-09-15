@@ -357,9 +357,9 @@ def seed_inventory() -> tuple[int, int, int]:
 
 
 NARRATIVES = {
-    "grafana": """### Launch-week boards nobody owns
+    "grafana": """### Launch-week Grafana boards, now in Elastic
 
-**Aether Games** ships a Grafana folder every launch: matchmaking wait, session gateway, auth login, store checkout. Relabel a job, drop `region`, or rename a duration metric — **widgets go blank**. SRE gets paged for “the dashboard is broken,” not a missing index.
+**Aether Games** ships a Grafana folder every launch: matchmaking wait, session gateway, auth, store. After those boards live in Kibana, a relabel, dropped `region`, or renamed duration metric still **blanks widgets**. SRE gets paged for “the dashboard is broken,” not a missing index.
 
 Grafana will not tell you which boards still query which jobs.
 
@@ -371,25 +371,15 @@ Grafana will not tell you which boards still query which jobs.
 | Silent blanks after relabel / Prom upgrade | 15m workflow probes widget fields; alert if `KEEP` fails |
 | Series billed whether a board still uses them | Keep the boards you still read |
 """,
-    "datadog": """### Dashboard sprawl — unused widgets still bill
+    "datadog": """### Launch-week Grafana boards, now in Elastic
 
-Aether Games Datadog orgs accumulate **hundreds of dashboards**. Custom metrics stay on the bill whether a widget still uses them. Drop a tag or rename a metric — the graph goes blank until launch-night SRE notices.
+Grafana folders of launch-week boards nobody owns. After migrate into Kibana, a relabel or renamed duration metric still blanks widgets.
 
-**This board** inventories dashboards → indexes, lists widget fields, and alerts when a schema change would break a widget.
-
-| Datadog pain | On Elastic Serverless |
-|--------------|------------------------|
-| Dashboard sprawl, unused widgets | One inventory of boards and the indexes behind them |
-| Custom metrics billed even if no board reads them | Map the boards you keep |
-| Silent widget breaks after tag/metric changes | 15m workflow probes widget fields; alert if `KEEP` fails |
+**This board** inventories dashboards → indexes, lists widget fields, and a 15-minute workflow alerts when a schema change would break a widget (`FROM index \\| KEEP field`).
 """,
-    "both": """### Everyone hates broken widgets
+    "both": """### Launch-week Grafana boards, now in Elastic
 
-**Grafana shops:** folders of launch-week boards nobody owns. Relabel or a Prom upgrade silently blanks matchmaking / session / auth panels.
-
-**Datadog shops:** hundreds of dashboards; custom metrics stay on the bill. A dropped tag fails until someone notices a blank graph.
-
-**Elastic:** this board inventories dashboards → indexes, lists widget fields, and a 15-minute workflow alerts when a schema change would break a widget (`FROM index \\| KEEP field`).
+Grafana folders of launch-week boards nobody owns. Relabel or a Prom upgrade silently blanks matchmaking / session / auth panels. After cutover those boards live in Kibana — Elastic inventories dashboards → indexes, lists widget fields, and a 15-minute workflow alerts when a schema change would break a widget (`FROM index \\| KEEP field`).
 """,
 }
 
@@ -470,7 +460,7 @@ ESQL = {
 
 
 def build_panels(*, include_markdown: bool) -> list:
-    narrative = NARRATIVES.get(COMPETITOR, NARRATIVES["both"])
+    narrative = NARRATIVES.get(COMPETITOR, NARRATIVES["grafana"])
     panels: list = []
     y0 = 0
     if include_markdown:

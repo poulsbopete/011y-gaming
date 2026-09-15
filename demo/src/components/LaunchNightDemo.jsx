@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Play, Radio, Workflow } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Radio, Workflow } from 'lucide-react';
 import { ModuleHeader, StatCard, DeepLinkBar, PrimaryCta, GhostCta } from './ui';
 import {
   getO11yKibanaUrl,
@@ -24,6 +24,8 @@ const WORKFLOW_STEPS = [
   { id: 'agent', label: 'Agent Builder writes the launch-night brief' },
   { id: 'index', label: 'Index the brief to aether-launch-night-runs' },
 ];
+
+const IDLE_STEPS = Object.fromEntries(WORKFLOW_STEPS.map((s) => [s.id, 'pending']));
 
 function buildSeries() {
   return Array.from({ length: 24 }, (_, i) => 80 + Math.sin(i / 2.2) * 18 + (i % 5) * 3);
@@ -72,39 +74,96 @@ export function LaunchNightDemo() {
   const [seeding, setSeeding] = useState(false);
   const [running, setRunning] = useState(false);
   const [executionId, setExecutionId] = useState(null);
+  const [wfStatus, setWfStatus] = useState('idle');
+  const [stepById, setStepById] = useState(IDLE_STEPS);
   const [log, setLog] = useState([]);
-  const [stepStatus, setStepStatus] = useState('pending');
+  const lastLogged = useRef('');
 
   function pushLog(msg) {
-    setLog((prev) => [`${new Date().toLocaleTimeString()}  ${msg}`, ...prev].slice(0, 10));
+    setLog((prev) => {
+      const line = `${new Date().toLocaleTimeString()}  ${msg}`;
+      if (prev[0] === line) return prev;
+      return [line, ...prev].slice(0, 10);
+    });
   }
+
+  useEffect(() => {
+    if (!executionId) return undefined;
+    let cancelled = false;
+    let timer;
+    const started = Date.now();
+
+    async function poll() {
+      try {
+        const r = await fetch(`/api/run-launch-night?executionId=${encodeURIComponent(executionId)}`);
+        const body = await r.json().catch(() => ({}));
+        if (cancelled) return;
+        if (body.steps) setStepById((prev) => ({ ...prev, ...body.steps }));
+        const status = body.status === 'pending' ? 'running' : body.status || 'running';
+        setWfStatus(status);
+        if (body.terminal || status === 'completed' || status === 'failed') {
+          setRunning(false);
+          const summary =
+            status === 'completed'
+              ? 'Execution complete — brief indexed to aether-launch-night-runs'
+              : `Execution ${status}`;
+          if (summary !== lastLogged.current) {
+            lastLogged.current = summary;
+            pushLog(summary);
+          }
+          return;
+        }
+      } catch {
+        /* keep polling Kibana */
+      }
+      if (Date.now() - started > 4 * 60 * 1000) {
+        setRunning(false);
+        pushLog('Still running in Kibana — open the workflow to watch the rest');
+        return;
+      }
+      timer = setTimeout(poll, 2500);
+    }
+
+    poll();
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [executionId]);
 
   async function runWorkflow() {
     setRunning(true);
     setExecutionId(null);
-    setStepStatus('running');
+    setWfStatus('starting');
+    setStepById({ ...IDLE_STEPS, metrics: 'running' });
+    lastLogged.current = '';
     pushLog('POST Kibana workflow Aether — Launch night incident');
     try {
       const r = await fetch('/api/run-launch-night', { method: 'POST' });
       const body = await r.json().catch(() => ({}));
-      const href = body.executionHref || body.workflowHref || workflowHref;
       if (!r.ok) {
+        setRunning(false);
+        setWfStatus('failed');
         pushLog(`Workflow: ${body.error || r.status} — open Kibana and click Run`);
+        const href = body.executionHref || body.workflowHref || workflowHref;
         if (href) window.open(href, '_blank', 'noopener,noreferrer');
         return;
       }
-      setExecutionId(body.executionId || null);
-      pushLog(
-        body.executionId
-          ? `Execution ${body.executionId} — watch steps in Kibana (not this ticker)`
-          : 'Workflow started — watch steps in Kibana',
-      );
-      if (href) window.open(href, '_blank', 'noopener,noreferrer');
+      if (!body.executionId) {
+        setRunning(false);
+        setWfStatus('failed');
+        pushLog('Workflow started but no execution id — open Kibana to watch it');
+        window.open(body.workflowHref || workflowHref, '_blank', 'noopener,noreferrer');
+        return;
+      }
+      setExecutionId(body.executionId);
+      setWfStatus('running');
+      pushLog(`Execution ${body.executionId} — polling Kibana until it finishes`);
     } catch (e) {
+      setRunning(false);
+      setWfStatus('failed');
       pushLog(`Workflow error: ${e instanceof Error ? e.message : String(e)}`);
       window.open(workflowHref, '_blank', 'noopener,noreferrer');
-    } finally {
-      setRunning(false);
     }
   }
 
@@ -128,8 +187,19 @@ export function LaunchNightDemo() {
   const statusColor = {
     pending: 'text-mist/50',
     running: 'text-cyan',
-    completed: 'text-amber',
+    skipped: 'text-mist',
+    completed: 'text-cyan',
+    failed: 'text-amber',
   };
+
+  const wfLabel =
+    wfStatus === 'completed'
+      ? 'Complete'
+      : wfStatus === 'failed'
+        ? 'Failed'
+        : wfStatus === 'starting' || wfStatus === 'running' || running
+          ? 'Running'
+          : 'Manual';
 
   const links = [
     { href: workflowHref, label: 'Launch-night workflow', primary: true },
@@ -147,12 +217,12 @@ export function LaunchNightDemo() {
       <ModuleHeader
         eyebrow="Launch night"
         title="Metrics, traces, and logs in one launch window"
-        subtitle="Do not play a fake 6-second incident. Seed live OTLP, then run the Kibana workflow — it probes metrics-*, traces-*, and logs-*, then Agent Builder writes the triage. Watch the execution in Elastic."
+        subtitle="Do not play a fake 6-second incident. Seed live OTLP, then run the Kibana workflow — this page polls the execution until ES|QL probes and Agent Builder finish."
         actions={
           <div className="flex flex-wrap gap-3">
             <PrimaryCta onClick={runWorkflow} disabled={running}>
               <Workflow className="w-4 h-4" />
-              {running ? 'Starting in Elastic…' : 'Run launch-night workflow'}
+              {running ? 'Watching Elastic…' : 'Run launch-night workflow'}
             </PrimaryCta>
             <GhostCta href={workflowHref}>Open workflow</GhostCta>
             <GhostCta onClick={seedMetrics} disabled={seeding}>
@@ -186,7 +256,8 @@ export function LaunchNightDemo() {
         />
         <StatCard
           label="Workflow"
-          value={executionId ? 'Running' : 'Manual'}
+          value={wfLabel}
+          accent={wfStatus === 'failed' ? 'amber' : 'cyan'}
           trend={executionId ? String(executionId).slice(0, 12) : 'aether-launch-night'}
           href={workflowHref}
         />
@@ -213,21 +284,27 @@ export function LaunchNightDemo() {
             Elastic workflow
           </h2>
           <ol className="space-y-3">
-            {WORKFLOW_STEPS.map((s, i) => (
-              <li key={s.id} className="flex gap-3 text-sm">
-                <span className={`font-mono text-[11px] tabular-nums pt-0.5 ${statusColor[stepStatus]}`}>
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <span className={stepStatus === 'pending' ? 'text-mist/60' : 'text-fog'}>{s.label}</span>
-              </li>
-            ))}
+            {WORKFLOW_STEPS.map((s, i) => {
+              const st = stepById[s.id] || 'pending';
+              return (
+                <li key={s.id} className="flex gap-3 text-sm">
+                  <span className={`font-mono text-[11px] tabular-nums pt-0.5 ${statusColor[st] || statusColor.pending}`}>
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <span className={st === 'pending' ? 'text-mist/60' : 'text-fog'}>
+                    {s.label}
+                    {st === 'running' ? ' — running' : st === 'completed' ? ' — done' : st === 'failed' ? ' — failed' : ''}
+                  </span>
+                </li>
+              );
+            })}
           </ol>
         </div>
       </div>
 
       <div className="border-t border-white/10 pt-4 font-mono text-[11px] text-mist space-y-1.5 min-h-[6.5rem]">
         {log.length === 0 ? (
-          <p className="text-mist/45">Seed telemetry, then run the Kibana workflow — it will not finish in 6 seconds</p>
+          <p className="text-mist/45">Seed telemetry, then run the Kibana workflow — this page follows the live execution</p>
         ) : (
           log.map((line) => <p key={line}>{line}</p>)
         )}

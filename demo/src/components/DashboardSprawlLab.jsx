@@ -25,7 +25,7 @@ const FOLDER = [
   {
     id: 'sg',
     title: 'Aether — Session gateway',
-    source: 'Datadog',
+    source: 'Grafana',
     owner: 'platform',
     fields: 'http_request_duration_seconds',
     repairedFields: 'http.server.request.duration',
@@ -41,7 +41,7 @@ const FOLDER = [
   {
     id: 'store',
     title: 'Aether — Store checkout',
-    source: 'Datadog',
+    source: 'Grafana',
     owner: 'unassigned',
     fields: 'checkout_duration_seconds',
     repairedFields: 'checkout_duration_seconds',
@@ -57,7 +57,7 @@ const FOLDER = [
   {
     id: 'deps',
     title: 'Aether — Dependency latency',
-    source: 'Datadog',
+    source: 'Grafana',
     owner: 'unassigned',
     fields: 'dependency_duration_seconds',
     repairedFields: 'dependency.duration',
@@ -65,7 +65,7 @@ const FOLDER = [
 ];
 
 const STEPS = [
-  { id: 'live', label: 'Grafana + Datadog boards already live on Observability Serverless' },
+  { id: 'live', label: 'Grafana boards already live on Observability Serverless' },
   { id: 'dev', label: 'Engineers ship a rename / drop a label — nobody filed a ticket' },
   { id: 'blank', label: 'Matchmaking + session widgets go blank in Kibana' },
   { id: 'detect', label: 'KEEP probes fail; Horizon flags the fields those widgets still query' },
@@ -149,7 +149,7 @@ export function DashboardSprawlLab() {
     schedule(() => {
       setBoards(14);
       setSteps((prev) => prev.map((s, i) => (i === 0 ? { ...s, status: 'running' } : s)));
-      pushLog('Cutover complete — Grafana + Datadog launch boards now Kibana on Observability Serverless');
+      pushLog('Cutover complete — Grafana launch boards now Kibana on Observability Serverless');
     }, 400);
 
     schedule(() => {
@@ -200,7 +200,7 @@ export function DashboardSprawlLab() {
       <ModuleHeader
         eyebrow="Broken widgets"
         title="Developers change schema. Elastic detects it. AI remaps the widgets."
-        subtitle="Schema changes are not in the launch plan — but game and platform engineers rename metrics and drop labels all the time. After Grafana and Datadog boards live on Observability Serverless, KEEP probes catch the blank widgets; Agent Builder maps old fields to what is actually in the index and remaps the queries."
+        subtitle="Schema changes are not in the launch plan — but game and platform engineers rename metrics and drop labels all the time. After Grafana boards live on Observability Serverless, KEEP probes catch the blank widgets; Agent Builder maps old fields to what is actually in the index and remaps the queries."
         actions={
           <div className="flex flex-wrap gap-3">
             <PrimaryCta onClick={phase === 'running' ? undefined : runBreakage} disabled={phase === 'running'}>
@@ -225,7 +225,7 @@ export function DashboardSprawlLab() {
       </ModuleHeader>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10 rise-in">
-        <StatCard label="Migrated boards" value={boards} trend="Grafana + Datadog → Kibana" />
+        <StatCard label="Migrated boards" value={boards} trend="Grafana → Kibana" />
         <StatCard
           label="Blank widgets"
           value={blankCount}
@@ -303,7 +303,10 @@ export function DashboardSprawlLab() {
           <p className="text-xs text-mist mt-4 leading-relaxed max-w-lg">
             Simulation for the POV. Detection is the KEEP probe + Horizon inventory on{' '}
             <span className="font-mono text-cyan">{project}</span>. Remap is Agent Builder
-            against live Kibana dashboard definitions.
+            against live Kibana dashboard definitions. In the schema-drift workflow, Skipped /
+            Not started on the Executions tab is the step graph before a run — click Run there
+            (or wait for the 15m schedule). <code className="text-cyan">record_drift</code> stays
+            skipped when KEEP succeeds; that step only runs on probe failure.
           </p>
         </div>
 

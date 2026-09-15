@@ -93,11 +93,177 @@ steps:
       message: Launch-night triage indexed to aether-launch-night-runs.
 `;
 
+const UI_STEP_BY_KIBANA = {
+  'workflow-start': 'metrics',
+  probe_metrics: 'metrics',
+  probe_traces: 'traces',
+  probe_logs: 'logs',
+  agent_triage: 'agent',
+  index_brief: 'index',
+  'workflow-done': 'index',
+};
+
+const TERMINAL = new Set(['completed', 'failed', 'cancelled', 'canceled', 'timed_out', 'timeout']);
+
 function json(res, status, body) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Cache-Control', 'no-store');
   res.end(JSON.stringify(body));
+}
+
+function pickExecutionId(body) {
+  if (!body || typeof body !== 'object') return null;
+  return (
+    body.executionId ||
+    body.workflowExecutionId ||
+    body.id ||
+    body.execution_id ||
+    body.data?.executionId ||
+    body.data?.workflowExecutionId ||
+    body.data?.id ||
+    body.execution?.id ||
+    null
+  );
+}
+
+function normalizeStatus(raw) {
+  const v = String(raw || '').toLowerCase().replace(/[\s-]+/g, '_');
+  if (['completed', 'complete', 'success', 'succeeded', 'ok', 'done'].includes(v)) return 'completed';
+  if (['failed', 'failure', 'error', 'timed_out', 'timeout', 'cancelled', 'canceled'].includes(v)) {
+    return v.startsWith('cancel') ? 'failed' : v === 'error' ? 'failed' : v === 'failure' ? 'failed' : 'failed';
+  }
+  if (v === 'skipped') return 'skipped';
+  if (['running', 'in_progress', 'pending', 'queued', 'waiting', 'waiting_for_input', 'not_started'].includes(v)) {
+    return v === 'not_started' || v === 'pending' || v === 'queued' ? 'pending' : 'running';
+  }
+  return v || 'running';
+}
+
+function isTerminal(status) {
+  return TERMINAL.has(String(status || '').toLowerCase()) || status === 'completed' || status === 'failed';
+}
+
+function firstArray(...candidates) {
+  for (const c of candidates) {
+    if (Array.isArray(c) && c.length) return c;
+  }
+  return [];
+}
+
+function extractRawSteps(body) {
+  if (!body || typeof body !== 'object') return [];
+  const listed = firstArray(
+    body.stepExecutions,
+    body.step_executions,
+    body.steps,
+    body.data?.stepExecutions,
+    body.data?.steps,
+    body.execution?.stepExecutions,
+    body.execution?.steps,
+    body.workflowExecution?.stepExecutions,
+    body.results,
+  );
+  if (listed.length) return listed;
+  const map = body.stepExecutions || body.steps || body.data?.stepExecutions;
+  if (map && typeof map === 'object' && !Array.isArray(map)) {
+    return Object.entries(map).map(([name, value]) =>
+      value && typeof value === 'object' ? { name, ...value } : { name, status: value },
+    );
+  }
+  return [];
+}
+
+function mapUiSteps(rawSteps, overall) {
+  const ui = {
+    metrics: 'pending',
+    traces: 'pending',
+    logs: 'pending',
+    agent: 'pending',
+    index: 'pending',
+  };
+  for (const step of rawSteps) {
+    if (!step || typeof step !== 'object') continue;
+    const name = String(step.stepId || step.step_id || step.name || step.id || '');
+    const key = UI_STEP_BY_KIBANA[name] || UI_STEP_BY_KIBANA[name.replace(/.*\./, '')];
+    if (!key) continue;
+    const status = normalizeStatus(step.status || step.state);
+    const rank = { pending: 0, running: 1, skipped: 2, completed: 3, failed: 4 };
+    if ((rank[status] ?? 0) >= (rank[ui[key]] ?? 0)) ui[key] = status;
+  }
+  if (overall === 'completed') {
+    for (const k of Object.keys(ui)) {
+      if (ui[k] === 'pending' || ui[k] === 'running') ui[k] = 'completed';
+    }
+  }
+  if (overall === 'running') {
+    const order = ['metrics', 'traces', 'logs', 'agent', 'index'];
+    const hasLive = order.some((k) => ui[k] === 'running' || ui[k] === 'completed' || ui[k] === 'failed');
+    if (!hasLive) ui.metrics = 'running';
+  }
+  return ui;
+}
+
+async function fetchExecution(kibana, apiKey, executionId) {
+  const paths = [
+    `/api/workflows/executions/${encodeURIComponent(executionId)}?includeOutput=true`,
+    `/api/workflows/executions/${encodeURIComponent(executionId)}`,
+    `/api/workflows/workflow/${WORKFLOW_ID}/executions/${encodeURIComponent(executionId)}`,
+  ];
+  let last = { ok: false, status: 0, body: null };
+  for (const path of paths) {
+    last = await kbn(kibana, apiKey, 'GET', path);
+    if (last.ok) return last;
+  }
+  const list = await kbn(
+    kibana,
+    apiKey,
+    'GET',
+    `/api/workflows/workflow/${WORKFLOW_ID}/executions?perPage=20`,
+  );
+  if (list.ok) {
+    const rows = firstArray(list.body?.results, list.body?.executions, list.body?.data, list.body?.items);
+    const match = rows.find((row) => pickExecutionId(row) === executionId);
+    if (match) return { ok: true, status: 200, body: match };
+  }
+  const steps = await kbn(
+    kibana,
+    apiKey,
+    'GET',
+    `/api/workflows/workflow/${WORKFLOW_ID}/executions/steps?executionId=${encodeURIComponent(executionId)}`,
+  );
+  if (steps.ok) return steps;
+  return last;
+}
+
+async function briefIndexed(esUrl, apiKey, executionId) {
+  if (!esUrl) return false;
+  try {
+    const upstream = await fetch(`${esUrl.replace(/\/$/, '')}/aether-launch-night-runs/_search`, {
+      method: 'POST',
+      headers: {
+        Authorization: `ApiKey ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        size: 1,
+        query: {
+          bool: {
+            should: [
+              { term: { execution_id: executionId } },
+              { term: { 'execution_id.keyword': executionId } },
+              { match_phrase: { execution_id: executionId } },
+            ],
+            minimum_should_match: 1,
+          },
+        },
+      }),
+    });
+    const body = await upstream.json().catch(() => ({}));
+    return Number(body?.hits?.total?.value ?? body?.hits?.total ?? 0) > 0 || Boolean(body?.hits?.hits?.length);
+  } catch {
+    return false;
+  }
 }
 
 function kibanaFromEs(esUrl) {
@@ -120,9 +286,11 @@ function kbnHeaders(apiKey) {
 }
 
 async function kbn(kibana, apiKey, method, path, body) {
+  const headers = kbnHeaders(apiKey);
+  if (body === undefined) delete headers['Content-Type'];
   const upstream = await fetch(`${kibana}${path}`, {
     method,
-    headers: kbnHeaders(apiKey),
+    headers,
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const text = await upstream.text();
@@ -152,7 +320,45 @@ export default async function handler(req, res) {
   const workflowHref = configured ? `${kibana}/app/workflows/${WORKFLOW_ID}` : null;
 
   if (req.method === 'GET') {
-    json(res, 200, { configured, workflowId: WORKFLOW_ID, workflowHref });
+    const executionId = new URL(req.url, 'http://local').searchParams.get('executionId');
+    if (!executionId) {
+      json(res, 200, { configured, workflowId: WORKFLOW_ID, workflowHref });
+      return;
+    }
+    if (!configured) {
+      json(res, 503, { error: 'ES_URL/KIBANA_URL and ES_API_KEY are not set on this deployment.' });
+      return;
+    }
+    try {
+      const exec = await fetchExecution(kibana, apiKey, executionId);
+      const raw = exec.body && typeof exec.body === 'object' ? exec.body : {};
+      let status = normalizeStatus(
+        raw.status || raw.state || raw.executionStatus || raw.execution?.status || raw.data?.status,
+      );
+      const rawSteps = extractRawSteps(raw);
+      const indexed = await briefIndexed(esUrl, apiKey, executionId);
+      if (indexed && !isTerminal(status)) status = 'completed';
+      const steps = mapUiSteps(rawSteps, status);
+      if (indexed) {
+        steps.agent = steps.agent === 'pending' ? 'completed' : steps.agent;
+        steps.index = 'completed';
+      }
+      json(res, exec.ok || indexed ? 200 : exec.status || 502, {
+        ok: exec.ok || indexed,
+        workflowId: WORKFLOW_ID,
+        executionId,
+        status,
+        terminal: isTerminal(status),
+        steps,
+        indexed,
+        workflowHref,
+        executionHref: `${kibana}/app/workflows/${WORKFLOW_ID}`,
+        kibanaStatus: exec.status,
+        kibanaKeys: raw && typeof raw === 'object' ? Object.keys(raw) : [],
+      });
+    } catch (err) {
+      json(res, 500, { error: err instanceof Error ? err.message : String(err), workflowHref });
+    }
     return;
   }
 
@@ -194,15 +400,7 @@ export default async function handler(req, res) {
       inputs: {},
     });
 
-    const executionId =
-      run.body?.executionId ||
-      run.body?.workflowExecutionId ||
-      run.body?.id ||
-      run.body?.execution_id ||
-      run.body?.data?.executionId ||
-      run.body?.data?.workflowExecutionId ||
-      run.body?.data?.id ||
-      null;
+    const executionId = pickExecutionId(run.body);
 
     if (!run.ok) {
       json(res, 502, {
