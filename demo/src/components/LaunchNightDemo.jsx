@@ -274,8 +274,9 @@ export function LaunchNightDemo() {
           <Sparkline series={series} />
           <p className="text-xs text-mist mt-4 leading-relaxed max-w-lg">
             Sparkline is illustration only. Real latency and throughput are in APM after seed
-            (Transactions, Last 24h). The Metrics tab needs process CPU/memory from that same seed —
-            Last 15 minutes often misses the OTel window on this shared project. The workflow on{' '}
+            (Transactions, Last 24h). Metrics and Logs need that same seed — they were empty before
+            we sent process metrics and OTLP logs. Last 15 minutes often misses the OTel window.
+            The workflow on{' '}
             <span className="font-mono text-cyan">{project}</span> is the source of truth.
           </p>
         </div>

@@ -1,6 +1,6 @@
 /**
  * Seed Aether Games demo telemetry into Elastic Observability Serverless via mOTLP.
- * Sends metrics + traces so Discover, APM Services, and Metrics light up.
+ * Sends metrics + traces + logs so Discover, APM Transactions, Metrics, and Logs light up.
  * Uses server-only ES_URL + ES_API_KEY (never VITE_*).
  *
  * POST /api/seed-metrics
@@ -42,6 +42,38 @@ const SPANS_PER_SERVICE = {
 };
 
 const WAVES = 3;
+
+const LOGS_PER_SERVICE = {
+  matchmaking: 90,
+  auth: 70,
+  'session-gateway': 70,
+  store: 50,
+};
+
+const LOG_LINES = {
+  matchmaking: [
+    ['INFO', 9, 'matchmaking ticket created region=us-west queue_depth='],
+    ['INFO', 9, 'matchmaking ready-check passed for party'],
+    ['WARN', 13, 'matchmaking wait_seconds elevated in us-west'],
+    ['ERROR', 17, 'matchmaking ticket allocate failed: no healthy session-gateway'],
+  ],
+  auth: [
+    ['INFO', 9, 'login succeeded for battlenet-linked account'],
+    ['WARN', 13, 'login rate-limit approaching for source.ip'],
+    ['ERROR', 17, 'login failed invalid_refresh_token'],
+    ['INFO', 9, 'session issued after login'],
+  ],
+  'session-gateway': [
+    ['INFO', 9, 'session heartbeat ok'],
+    ['WARN', 13, 'session-gateway websocket resume lag'],
+    ['ERROR', 17, 'session bind failed: matchmaking correlation id missing'],
+  ],
+  store: [
+    ['INFO', 9, 'store catalog cache hit'],
+    ['INFO', 9, 'checkout started'],
+    ['ERROR', 17, 'store checkout declined: payment_processor_timeout'],
+  ],
+};
 
 function json(res, status, body) {
   res.statusCode = status;
@@ -305,6 +337,48 @@ function buildTracesPayload() {
   return { resourceSpans };
 }
 
+function logTime(nowMs) {
+  if (Math.random() < 0.6) return nowMs - randInt(0, 12 * 60_000);
+  if (Math.random() < 0.85) return nowMs - randInt(0, 2 * 3600_000);
+  return nowMs - randInt(0, 24 * 3600_000);
+}
+
+function buildLogsPayload() {
+  const nowMs = Date.now();
+  const resourceLogs = SERVICES.filter((s) => s !== 'aether-games-fleet').map((svc) => {
+    const templates = LOG_LINES[svc] || LOG_LINES.matchmaking;
+    const count = LOGS_PER_SERVICE[svc] || 40;
+    const logRecords = [];
+
+    for (let i = 0; i < count; i++) {
+      const [severityText, severityNumber, prefix] = pick(templates);
+      const failed = severityNumber >= 17;
+      const ts = logTime(nowMs);
+      const suffix = failed ? ` err=${randInt(1, 9)}` : ` n=${randInt(10, 99)}`;
+      logRecords.push({
+        timeUnixNano: msToNano(ts),
+        observedTimeUnixNano: msToNano(nowMs),
+        severityNumber,
+        severityText,
+        body: { stringValue: `${prefix}${suffix}` },
+        attributes: [
+          kv('log.logger', `aether.${svc}`),
+          kv('event.dataset', `${svc}.log`),
+        ],
+        traceId: hexId(16),
+        spanId: hexId(8),
+      });
+    }
+
+    return {
+      resource: serviceResource(svc, `${svc}-usw-1`),
+      scopeLogs: [{ scope: { name: 'aether.games.vercel', version: '1.0.0' }, logRecords }],
+    };
+  });
+
+  return { resourceLogs };
+}
+
 async function postOtlp(endpoint, apiKey, payload) {
   const upstream = await fetch(endpoint, {
     method: 'POST',
@@ -346,7 +420,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== 'POST') {
-    json(res, 405, { error: 'Use POST to seed metrics + traces' });
+    json(res, 405, { error: 'Use POST to seed metrics, traces, and logs' });
     return;
   }
 
@@ -360,28 +434,39 @@ export default async function handler(req, res) {
   try {
     let metricsOk = 0;
     let tracesOk = 0;
+    let logsOk = 0;
     let lastMetrics;
     let lastTraces;
+    let lastLogs;
     let spanTotal = 0;
+    let logTotal = 0;
 
     for (let wave = 0; wave < WAVES; wave++) {
       const metricsPayload = buildMetricsPayload();
       const tracesPayload = buildTracesPayload();
+      const logsPayload = buildLogsPayload();
       spanTotal += tracesPayload.resourceSpans.reduce(
         (n, rs) => n + (rs.scopeSpans?.[0]?.spans?.length || 0),
         0,
       );
+      logTotal += logsPayload.resourceLogs.reduce(
+        (n, rl) => n + (rl.scopeLogs?.[0]?.logRecords?.length || 0),
+        0,
+      );
       lastMetrics = await postOtlp(`${ingest}/v1/metrics`, apiKey, metricsPayload);
       lastTraces = await postOtlp(`${ingest}/v1/traces`, apiKey, tracesPayload);
+      lastLogs = await postOtlp(`${ingest}/v1/logs`, apiKey, logsPayload);
       if (lastMetrics.ok) metricsOk += 1;
       if (lastTraces.ok) tracesOk += 1;
+      if (lastLogs.ok) logsOk += 1;
     }
 
-    if (metricsOk === 0 && tracesOk === 0) {
+    if (metricsOk === 0 && tracesOk === 0 && logsOk === 0) {
       json(res, 502, {
-        error: 'OTLP ingest failed for metrics and traces',
+        error: 'OTLP ingest failed for metrics, traces, and logs',
         metrics: lastMetrics,
         traces: lastTraces,
+        logs: lastLogs,
         endpoint: ingest.replace(/https?:\/\//, ''),
       });
       return;
@@ -389,15 +474,20 @@ export default async function handler(req, res) {
 
     json(res, 200, {
       ok: true,
-      message: `Seeded ${spanTotal} spans across ${WAVES} waves (matchmaking, auth, session-gateway, store).`,
+      message: `Seeded ${spanTotal} spans and ${logTotal} log lines across ${WAVES} waves (matchmaking, auth, session-gateway, store).`,
       metrics: { okWaves: metricsOk, lastStatus: lastMetrics?.status },
       traces: {
         okWaves: tracesOk,
         lastStatus: lastTraces?.status,
         body: lastTraces?.ok ? undefined : lastTraces?.body,
       },
+      logs: {
+        okWaves: logsOk,
+        lastStatus: lastLogs?.status,
+        body: lastLogs?.ok ? undefined : lastLogs?.body,
+      },
       services: SERVICES.filter((s) => s !== 'aether-games-fleet'),
-      hint: 'Wait ~30–60s, then APM → matchmaking → Transactions and Metrics (Last 24h). Process CPU/memory is seeded for the Metrics tab.',
+      hint: 'Wait ~30–60s, then APM → matchmaking → Transactions, Metrics, and Logs (Last 24h, or Last 15m right after seed).',
     });
   } catch (err) {
     json(res, 500, { error: err instanceof Error ? err.message : String(err) });
