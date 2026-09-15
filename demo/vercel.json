@@ -8,6 +8,7 @@
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "functions": {
-    "api/seed-metrics.js": { "maxDuration": 60 }
+    "api/seed-metrics.js": { "maxDuration": 60 },
+    "api/run-launch-night.js": { "maxDuration": 60 }
   }
 }

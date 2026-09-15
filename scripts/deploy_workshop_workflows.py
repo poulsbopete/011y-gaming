@@ -47,6 +47,7 @@ DEFAULT_FILES = (
     "aether-dashboard-briefs.yaml",
     "aether-ml-anomaly-cps-security.yaml",
     "aether-loki-a2a-stub.yaml",
+    "aether-launch-night.yaml",
 )
 
 
@@ -199,6 +200,7 @@ def main() -> int:
     print("    • Aether — dashboard briefs (Agent Builder)")
     print("    • Aether — ML anomaly → Security via CPS")
     print("    • Aether — Loki LogQL via A2A (stub)")
+    print("    • Aether — Launch night incident")
     return 0 if ok else 1
 
 

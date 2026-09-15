@@ -1,0 +1,113 @@
+version: "1"
+name: Aether — Launch night incident
+description: |
+  POV for a launch-window incident. Pulls live **metrics**, **traces**, and **logs**
+  for matchmaking / auth / session-gateway, then Agent Builder writes a triage and
+  remediation brief. Manual run from the Aether Games demo (or Kibana → Workflows).
+
+  Does not invent a fake spike — it reads what is already in Observability Serverless.
+enabled: true
+tags:
+  - aether-games
+  - launch-night
+  - DEMO
+triggers:
+  - type: manual
+
+steps:
+  - name: workflow-start
+    type: console
+    with:
+      message: |
+        Aether launch-night workflow started (execution {{ execution.id }}).
+        Probing metrics-*, traces-*, logs-* for matchmaking / auth / session-gateway.
+
+  - name: probe_metrics
+    type: elasticsearch.request
+    with:
+      method: POST
+      path: /_query
+      body:
+        query: |
+          FROM metrics-*
+          | WHERE service.name IN ("matchmaking", "auth", "session-gateway", "aether-games-fleet")
+          | STATS metric_points = COUNT(*) BY service.name
+          | SORT metric_points DESC
+          | LIMIT 15
+
+  - name: probe_traces
+    type: elasticsearch.request
+    with:
+      method: POST
+      path: /_query
+      body:
+        query: |
+          FROM traces-*
+          | WHERE service.name IN ("matchmaking", "auth", "session-gateway", "store")
+          | STATS spans = COUNT(*) BY service.name
+          | SORT spans DESC
+          | LIMIT 15
+
+  - name: probe_logs
+    type: elasticsearch.request
+    continue: true
+    with:
+      method: POST
+      path: /_query
+      body:
+        query: |
+          FROM logs-*
+          | WHERE service.name IN ("matchmaking", "auth", "session-gateway")
+             OR message LIKE "*matchmaking*"
+             OR message LIKE "*login*"
+          | STATS log_lines = COUNT(*) BY service.name
+          | SORT log_lines DESC
+          | LIMIT 15
+
+  - name: agent_triage
+    type: ai.agent
+    with:
+      message: |
+        You are an SRE on **Aether Games** launch night. Observability Serverless just
+        returned these probes. Do not invent hosts, regions, or percentages that are not
+        in the data.
+
+        Metrics (service samples):
+        {{ steps.probe_metrics.output }}
+
+        Traces / APM spans:
+        {{ steps.probe_traces.output }}
+
+        Logs:
+        {{ steps.probe_logs.output }}
+
+        Write markdown (max ~35 lines):
+        1. **Verdict** — one sentence: capacity, auth abuse, empty telemetry, or mixed.
+        2. **Metrics** — what the counts imply for matchmaking vs auth vs session-gateway.
+        3. **Traces** — which services are actually in APM right now.
+        4. **Logs** — if empty, say so; do not pretend there are log hits.
+        5. **Resolve** — 5 concrete Kibana next steps:
+           - Discover ES|QL on metrics-* by service.name
+           - APM → matchmaking → Transactions
+           - Discover traces-*
+           - If auth samples spike: Security alerts (CPS), not A2A
+           - If widgets later go blank: Horizon — Dashboard sprawl + schema-drift workflow
+
+  - name: index_brief
+    type: elasticsearch.request
+    with:
+      method: POST
+      path: /aether-launch-night-runs/_doc
+      body:
+        "@timestamp": "{{ now | date: '%Y-%m-%dT%H:%M:%SZ' }}"
+        execution_id: "{{ execution.id }}"
+        workflow_name: "{{ workflow.name }}"
+        source: aether_launch_night
+        brief: "{{ steps.agent_triage.output.message }}"
+
+  - name: workflow-done
+    type: console
+    with:
+      message: |
+        Launch-night triage indexed to aether-launch-night-runs.
+        Stay in this execution to read Agent Builder output, then open APM → matchmaking.
