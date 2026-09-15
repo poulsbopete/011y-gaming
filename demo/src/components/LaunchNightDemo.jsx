@@ -10,11 +10,11 @@ import {
   kibanaDashboardsUrl,
   kibanaRulesUrl,
   kibanaMetricsUrl,
+  kibanaApmTracesUrl,
   kibanaDashboardViewUrl,
   kibanaWorkflowUrl,
   AETHER_AUTH_ESQL,
   AETHER_DISCOVER_ESQL,
-  AETHER_TRACES_ESQL,
   AETHER_LAUNCH_OPS_DASHBOARD_ID,
   LAUNCH_NIGHT_WORKFLOW_ID,
 } from '../lib/elastic-api';
@@ -64,7 +64,7 @@ export function LaunchNightDemo() {
   const kibana = getO11yKibanaUrl();
   const project = kibanaHostLabel(kibana);
   const discoverHref = kibanaDiscoverUrl(kibana, { query: AETHER_DISCOVER_ESQL });
-  const tracesHref = kibanaDiscoverUrl(kibana, { query: AETHER_TRACES_ESQL });
+  const tracesHref = kibanaApmTracesUrl(kibana);
   const apmHref = kibanaObservabilityServicesUrl(kibana);
   const matchmakingHref = kibanaApmServiceUrl(kibana, 'matchmaking');
   const dashboardsHref = kibanaDashboardsUrl(kibana);

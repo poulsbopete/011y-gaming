@@ -9,6 +9,7 @@
   ],
   "functions": {
     "api/seed-metrics.js": { "maxDuration": 60 },
-    "api/run-launch-night.js": { "maxDuration": 60 }
+    "api/run-launch-night.js": { "maxDuration": 60 },
+    "api/create-case.js": { "maxDuration": 30 }
   }
 }

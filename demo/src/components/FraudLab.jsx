@@ -52,6 +52,8 @@ export function FraudLab() {
   const [seedMsg, setSeedMsg] = useState(null);
   const [seeding, setSeeding] = useState(false);
 
+  const [creatingCase, setCreatingCase] = useState(false);
+
   const refresh = useCallback(() => {
     setAlerts((prev) =>
       prev.map((a, i) =>
@@ -67,13 +69,45 @@ export function FraudLab() {
     return () => clearInterval(t);
   }, [refresh]);
 
-  function openCase() {
-    if (!selected) return;
-    setCaseNote({
-      title: selected.title,
-      id: `CASE-${Math.floor(10000 + Math.random() * 89999)}`,
-      status: 'open',
-    });
+  async function openCase() {
+    if (!selected || creatingCase) return;
+    setCreatingCase(true);
+    setCaseNote(null);
+    try {
+      const r = await fetch('/api/create-case', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: selected.title,
+          severity: selected.severity,
+          entity: selected.entity,
+          region: selected.region,
+          signal: selected.signal,
+          alertId: selected.id,
+        }),
+      });
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setCaseNote({
+          error: true,
+          message: body.error || `Case create failed (${r.status})`,
+        });
+        return;
+      }
+      setCaseNote({
+        title: body.title || selected.title,
+        id: body.id,
+        href: body.href,
+        status: body.status || 'open',
+      });
+    } catch (e) {
+      setCaseNote({
+        error: true,
+        message: e instanceof Error ? e.message : String(e),
+      });
+    } finally {
+      setCreatingCase(false);
+    }
   }
 
   function isolateHost() {
@@ -216,8 +250,9 @@ export function FraudLab() {
               </dl>
 
               <div className="flex flex-col gap-2 mt-auto">
-                <PrimaryCta onClick={openCase}>
-                  <FolderOpen className="w-4 h-4" /> Create case (sim)
+                <PrimaryCta onClick={openCase} disabled={creatingCase}>
+                  <FolderOpen className="w-4 h-4" />
+                  {creatingCase ? 'Opening case…' : 'Create case'}
                 </PrimaryCta>
                 <button
                   type="button"
@@ -236,10 +271,25 @@ export function FraudLab() {
                 </a>
               </div>
 
-              {caseNote && (
+              {caseNote && caseNote.error && (
                 <p className="mt-4 text-xs text-amber border border-amber/30 rounded-md p-3">
-                  Case <span className="font-mono">{caseNote.id}</span> opened for “{caseNote.title}”
-                  (simulated). Continue in Kibana Cases.
+                  {caseNote.message}
+                </p>
+              )}
+              {caseNote && !caseNote.error && (
+                <p className="mt-4 text-xs text-cyan border border-cyan/30 rounded-md p-3">
+                  Case{' '}
+                  <span className="font-mono">{caseNote.id}</span> opened for “{caseNote.title}”.{' '}
+                  {caseNote.href ? (
+                    <a
+                      href={caseNote.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-amber hover:text-cyan"
+                    >
+                      Open in Kibana →
+                    </a>
+                  ) : null}
                 </p>
               )}
               {isolated && (

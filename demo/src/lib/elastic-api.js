@@ -173,13 +173,22 @@ export function kibanaApmServiceUrl(kibanaBase, serviceName = 'matchmaking', tab
 }
 
 /**
- * Metrics deep link for the demo.
- * Metrics Explorer (`/app/metrics/explorer`) was removed on Observability Serverless (404).
- * Prefer Discover metrics exploration for Aether OTLP service metrics.
- * Host inventory (if needed): `${base}/app/metrics/hosts`
+ * APM Metrics tab for matchmaking (process CPU/memory after seed).
+ * Metrics Explorer (`/app/metrics/explorer`) 404s on Observability Serverless.
  */
 export function kibanaMetricsUrl(kibanaBase) {
-  return kibanaDiscoverUrl(kibanaBase, { query: AETHER_DISCOVER_ESQL });
+  return kibanaApmServiceUrl(kibanaBase, 'matchmaking', 'metrics');
+}
+
+export function kibanaApmTracesUrl(kibanaBase) {
+  const base = (kibanaBase || getO11yKibanaUrl()).replace(/\/$/, '');
+  const params = new URLSearchParams({
+    comparisonEnabled: 'true',
+    environment: 'ENVIRONMENT_ALL',
+    rangeFrom: 'now-24h',
+    rangeTo: 'now',
+  });
+  return `${base}/app/apm/traces?${params.toString()}`;
 }
 
 /** @deprecated Use kibanaMetricsUrl — Metrics Explorer 404s on Serverless. */
