@@ -53,7 +53,8 @@ steps:
           | LIMIT 15
   - name: probe_logs
     type: elasticsearch.request
-    continue: true
+    on-failure:
+      continue: true
     with:
       method: POST
       path: /_query
