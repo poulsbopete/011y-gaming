@@ -31,8 +31,8 @@ export function WhyElasticSection() {
     <div>
       <ModuleHeader
         eyebrow="Why Elastic"
-        title="Proof points for platform metrics"
-        subtitle="Engineers don't change tools — we meet them where they are. Elastic becomes the metrics backend: faster, cheaper, unified with logs and traces."
+        title="Proof points after the story"
+        subtitle="You already walked launch-night telemetry, AI widget repair, Grafana/Alertmanager cutover, fraud, and A2A to existing tools. Here is why the metrics backend is Elastic: faster, cheaper, unified with logs and traces."
       />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
         {STATS.map((s) => (

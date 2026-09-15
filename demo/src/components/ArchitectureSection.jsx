@@ -43,7 +43,7 @@ export function ArchitectureSection({ embedded = false } = {}) {
         className="pointer-events-none absolute inset-0 opacity-40"
         style={{
           background:
-            'radial-gradient(ellipse 50% 40% at 20% 50%, rgba(34,211,238,0.08), transparent), radial-gradient(ellipse 50% 40% at 80% 50%, rgba(251,191,36,0.07), transparent)',
+            'radial-gradient(ellipse 50% 40% at 20% 50%, rgba(0,174,255,0.08), transparent), radial-gradient(ellipse 50% 40% at 80% 50%, rgba(255,184,28,0.07), transparent)',
         }}
       />
 
@@ -54,13 +54,12 @@ export function ArchitectureSection({ embedded = false } = {}) {
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
           <div>
             <h2 className="font-display text-3xl md:text-4xl font-bold text-fog mb-3">
-              Observability and Security stay separate projects
+              Keep existing tools in the loop with A2A
             </h2>
             <p className="text-mist max-w-2xl text-base md:text-lg leading-relaxed">
-              Between Elastic Serverless projects, correlate with{' '}
-              <span className="text-fog font-medium">CPS</span> (cross-project search). Reach{' '}
-              <span className="text-fog font-medium">non-Elastic</span> systems with{' '}
-              <span className="text-fog font-medium">A2A</span> — scoped agent endpoints, not cluster peering.
+              Observability and Security stay separate Elastic projects — correlate them with{' '}
+              <span className="text-fog font-medium">CPS</span>. Reach Grafana, Loki, Datadog, SIEM, or studio backends with{' '}
+              <span className="text-fog font-medium">A2A</span> so analysts stay in Kibana without ripping out what already works.
             </p>
           </div>
           <a
@@ -88,7 +87,7 @@ export function ArchitectureSection({ embedded = false } = {}) {
             <div>
               <p className="text-xs uppercase tracking-[0.14em] text-amber mb-1 font-medium">A2A</p>
               <p className="text-sm text-mist leading-relaxed">
-                Non-Elastic solutions — e.g. call Loki LogQL from a Kibana workflow so analysts stay in Kibana during migration; also Grafana, Datadog, SIEM, or studio backends.
+                Non-Elastic solutions they already run — Loki LogQL from a Kibana workflow, Grafana, Datadog, SIEM, or studio backends. Scoped agent endpoints, not cluster peering.
               </p>
             </div>
           </div>

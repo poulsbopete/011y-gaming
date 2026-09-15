@@ -108,8 +108,8 @@ export function FraudLab() {
     <div>
       <ModuleHeader
         eyebrow="Account fraud"
-        title="Investigate gaming fraud signals"
-        subtitle="Triage simulated alerts here, then Seed live Security alerts. Open Alerts / Attacks / Entity analytics in the Default space (not “Security - psimkins”). Attacks needs an LLM connector, then Run from Detections → Views → Attacks."
+        title="Gaming fraud on the same launch night"
+        subtitle="Credential stuffing, multi-account abuse, stolen checkout — Security stays its own project. Seed live alerts, then correlate with Observability auth and session signals."
         actions={
           <PrimaryCta onClick={seedLiveFraud} disabled={seeding}>
             {seeding ? 'Seeding…' : 'Seed live Security alerts'}

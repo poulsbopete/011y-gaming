@@ -1,22 +1,22 @@
 import { ModuleHeader } from './ui';
-import { Gauge, Layers, Wallet } from 'lucide-react';
+import { LayoutDashboard, Bell, Plug } from 'lucide-react';
 import { getInstruqtInviteUrl } from '../lib/elastic-api';
 
 const POINTS = [
   {
-    icon: Layers,
-    title: 'Keep what you built',
-    body: 'Grafana and Datadog boards, PromQL, and alerting intent come across. After cutover they live in Kibana. When engineers unexpectedly rename a field, Horizon + KEEP probes detect the blank widgets and Agent Builder remaps the queries.',
+    icon: LayoutDashboard,
+    title: 'Migrate Grafana boards',
+    body: 'One script converts Grafana / PromQL dashboards onto Observability Serverless. Layout and query intent stay — they go live as Kibana boards the same day.',
   },
   {
-    icon: Gauge,
-    title: 'One operations plane',
-    body: 'Metrics beside logs and traces on Observability Serverless — one platform, one bill when matchmaking or auth burns on launch night.',
+    icon: Bell,
+    title: 'Bring Alertmanager with you',
+    body: 'Alerting definitions migrate as Kibana rule drafts (disabled until you own them). Same thresholds, same paging intent — not a rewrite of the on-call catalog.',
   },
   {
-    icon: Wallet,
-    title: 'Same-day cutover path',
-    body: 'Connect Grafana and Datadog, auto-convert boards and rules, go live on Observability Serverless — migrate overnight, not over quarters.',
+    icon: Plug,
+    title: 'Or keep Grafana pointed at Elastic',
+    body: 'Not ready to leave Grafana? Use Elastic as the PromQL metrics backend. Teams keep the UI they know while queries, cost, and launch-night scale sit on Serverless.',
   },
 ];
 
@@ -25,9 +25,9 @@ export function MigrateSection() {
   return (
     <div>
       <ModuleHeader
-        eyebrow="Grafana + Datadog → Elastic"
-        title="Meet platform teams where they already work"
-        subtitle="Bring Aether Games Grafana and Datadog boards into Observability Serverless without a rewrite. Hands-on path is the Instruqt workshop."
+        eyebrow="Grafana + Alertmanager → Elastic"
+        title="Convert the estate — or just retarget Grafana"
+        subtitle="Platform teams do not have to redraw boards. Migrate Grafana dashboards and Alertmanager definitions into Kibana, or keep Grafana and point it at Elastic as the metrics store."
       />
       <div className="grid md:grid-cols-3 gap-8 mb-10">
         {POINTS.map(({ icon: Icon, title, body }) => (

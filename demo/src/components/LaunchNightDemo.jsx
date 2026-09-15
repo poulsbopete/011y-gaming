@@ -195,8 +195,8 @@ export function LaunchNightDemo() {
     <div>
       <ModuleHeader
         eyebrow="Launch night"
-        title="Run a launch-window incident"
-        subtitle="Walk matchmaking spike → auth correlation → A2A Security hint → remediation. Seed live telemetry, then open the same story in Kibana."
+        title="Metrics, traces, and logs in one launch window"
+        subtitle="Matchmaking spike, auth failures, session-gateway traces — the same incident across metrics, logs, and APM. Seed live telemetry, then open Discover and APM in Kibana."
         actions={
           <div className="flex flex-wrap gap-3">
             <PrimaryCta onClick={runIncident} disabled={phase === 'running'}>

@@ -11,10 +11,10 @@ import { getInstruqtInviteUrl } from './lib/elastic-api';
 const MODULES = [
   { id: 'launch', label: 'Launch night', live: true },
   { id: 'sprawl', label: 'Broken widgets', live: true },
-  { id: 'why', label: 'Why Elastic' },
   { id: 'migrate', label: 'Migrate' },
   { id: 'fraud', label: 'Fraud', live: true },
   { id: 'architecture', label: 'A2A' },
+  { id: 'why', label: 'Why Elastic' },
 ];
 
 const MODULE_COMPONENTS = {
