@@ -10,10 +10,12 @@ import {
   kibanaDashboardsUrl,
   kibanaRulesUrl,
   kibanaMetricsUrl,
+  kibanaDashboardViewUrl,
   kibanaWorkflowUrl,
   AETHER_AUTH_ESQL,
   AETHER_DISCOVER_ESQL,
   AETHER_TRACES_ESQL,
+  AETHER_LAUNCH_OPS_DASHBOARD_ID,
   LAUNCH_NIGHT_WORKFLOW_ID,
 } from '../lib/elastic-api';
 
@@ -69,6 +71,7 @@ export function LaunchNightDemo() {
   const rulesHref = kibanaRulesUrl(kibana);
   const metricsHref = kibanaMetricsUrl(kibana);
   const workflowHref = kibanaWorkflowUrl(kibana, LAUNCH_NIGHT_WORKFLOW_ID);
+  const launchOpsHref = kibanaDashboardViewUrl(kibana, AETHER_LAUNCH_OPS_DASHBOARD_ID);
 
   const [series] = useState(() => buildSeries());
   const [seeding, setSeeding] = useState(false);
@@ -202,7 +205,8 @@ export function LaunchNightDemo() {
           : 'Manual';
 
   const links = [
-    { href: workflowHref, label: 'Launch-night workflow', primary: true },
+    { href: launchOpsHref, label: 'Launch ops (Vega)', primary: true },
+    { href: workflowHref, label: 'Launch-night workflow' },
     { href: discoverHref, label: 'Discover' },
     { href: apmHref, label: 'APM' },
     { href: matchmakingHref, label: 'Matchmaking' },
@@ -224,6 +228,7 @@ export function LaunchNightDemo() {
               <Workflow className="w-4 h-4" />
               {running ? 'Watching Elastic…' : 'Run launch-night workflow'}
             </PrimaryCta>
+            <GhostCta href={launchOpsHref}>Launch ops Vega</GhostCta>
             <GhostCta href={workflowHref}>Open workflow</GhostCta>
             <GhostCta onClick={seedMetrics} disabled={seeding}>
               <Radio className="w-4 h-4" />

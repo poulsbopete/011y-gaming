@@ -10,6 +10,7 @@ import {
   kibanaRulesUrl,
   LOKI_STUB_DASH_AUTH,
   LOKI_STUB_DASH_LAUNCH,
+  AETHER_LAUNCH_OPS_DASHBOARD_ID,
 } from '../lib/elastic-api';
 
 export function ObservabilitySection() {
@@ -18,6 +19,7 @@ export function ObservabilitySection() {
   const links = [
     { label: 'Discover (ES|QL)', href: kibanaDiscoverUrl(kibana) },
     { label: 'Dashboards', href: kibanaDashboardsUrl(kibana) },
+    { label: 'Launch ops (Vega)', href: kibanaDashboardViewUrl(kibana, AETHER_LAUNCH_OPS_DASHBOARD_ID) },
     { label: 'Loki stub · Auth failures', href: kibanaDashboardViewUrl(kibana, LOKI_STUB_DASH_AUTH) },
     { label: 'Loki stub · Launch window', href: kibanaDashboardViewUrl(kibana, LOKI_STUB_DASH_LAUNCH) },
     { label: 'APM services', href: kibanaObservabilityServicesUrl(kibana) },
