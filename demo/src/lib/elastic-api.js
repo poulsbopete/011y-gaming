@@ -113,7 +113,6 @@ export const LOKI_STUB_DASH_LAUNCH = 'aether-loki-stub-launch-window';
 export const HORIZON_SPRAWL_DASHBOARD_ID = 'horizon-dashboard-sprawl';
 export const DASHBOARD_SCHEMA_DRIFT_WORKFLOW_ID = 'dashboard-schema-drift-check';
 export const DASHBOARD_SCHEMA_DRIFT_RULE_ID = 'dashboard-schema-drift';
-export const AETHER_AI_NOTES_DASHBOARD_ID = 'workshop-aether-ai-notes';
 
 export function kibanaWorkflowUrl(kibanaBase, workflowId) {
   const base = (kibanaBase || getO11yKibanaUrl()).replace(/\/$/, '');

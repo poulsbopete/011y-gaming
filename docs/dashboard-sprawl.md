@@ -11,7 +11,6 @@ Elastic inventories those **migrated** dashboards → the indexes they query, KE
 | Surface | URL |
 | --- | --- |
 | Dashboard **Horizon — Dashboard sprawl** | https://otel-demo-a5630c.kb.us-east-1.aws.elastic.cloud/app/dashboards#/view/horizon-dashboard-sprawl |
-| Dashboard **Aether — AI notes** | https://otel-demo-a5630c.kb.us-east-1.aws.elastic.cloud/app/dashboards#/view/workshop-aether-ai-notes |
 | Workflow **Dashboard schema drift check** | https://otel-demo-a5630c.kb.us-east-1.aws.elastic.cloud/app/workflows/dashboard-schema-drift-check |
 | Alert **Dashboard schema drift** | https://otel-demo-a5630c.kb.us-east-1.aws.elastic.cloud/app/management/insightsAndAlerting/triggersActions/rule/dashboard-schema-drift |
 
@@ -33,4 +32,4 @@ Open **Dashboards → Horizon — Dashboard sprawl** on the play’s Kibana (`:8
 
 ## Vercel demo
 
-Module **Broken widgets** deep-links Horizon, the schema-drift workflow/alert, and **Aether — AI notes**.
+Module **Broken widgets** deep-links Horizon and the schema-drift workflow/alert. **Aether — AI notes** is created in the Instruqt play by `ensure_ai_recommendation_panels.py`, not on the fixed otel-demo project.

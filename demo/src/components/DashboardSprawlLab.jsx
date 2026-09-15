@@ -11,7 +11,6 @@ import {
   HORIZON_SPRAWL_DASHBOARD_ID,
   DASHBOARD_SCHEMA_DRIFT_WORKFLOW_ID,
   DASHBOARD_SCHEMA_DRIFT_RULE_ID,
-  AETHER_AI_NOTES_DASHBOARD_ID,
 } from '../lib/elastic-api';
 
 const FOLDER = [
@@ -86,7 +85,6 @@ export function DashboardSprawlLab() {
   const sprawlHref = kibanaDashboardViewUrl(kibana, HORIZON_SPRAWL_DASHBOARD_ID);
   const workflowHref = kibanaWorkflowUrl(kibana, DASHBOARD_SCHEMA_DRIFT_WORKFLOW_ID);
   const ruleHref = kibanaManagementRuleUrl(kibana, DASHBOARD_SCHEMA_DRIFT_RULE_ID);
-  const aiNotesHref = kibanaDashboardViewUrl(kibana, AETHER_AI_NOTES_DASHBOARD_ID);
   const listHref = kibanaDashboardsUrl(kibana);
 
   const [phase, setPhase] = useState('idle');
@@ -190,7 +188,7 @@ export function DashboardSprawlLab() {
       setDrift(0);
       setSteps((prev) => prev.map((s) => ({ ...s, status: 'done' })));
       setPhase('done');
-      pushLog('KEEP probes passing — 3 widgets restored by AI. Open Aether — AI notes');
+      pushLog('KEEP probes passing — 3 widgets restored by AI. Open Horizon — Dashboard sprawl');
     }, 6500);
   }
 
@@ -220,7 +218,6 @@ export function DashboardSprawlLab() {
           links={[
             { label: 'Horizon — Dashboard sprawl', href: sprawlHref, primary: true },
             { label: 'Schema drift workflow', href: workflowHref },
-            { label: 'Aether — AI notes', href: aiNotesHref },
             { label: 'Drift alert rule', href: ruleHref },
             { label: 'All dashboards', href: listHref },
           ]}
@@ -306,7 +303,7 @@ export function DashboardSprawlLab() {
           <p className="text-xs text-mist mt-4 leading-relaxed max-w-lg">
             Simulation for the POV. Detection is the KEEP probe + Horizon inventory on{' '}
             <span className="font-mono text-cyan">{project}</span>. Remap is Agent Builder
-            (Aether — AI notes) against live Kibana dashboard definitions.
+            against live Kibana dashboard definitions.
           </p>
         </div>
 
