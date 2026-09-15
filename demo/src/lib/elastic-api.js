@@ -2,10 +2,20 @@ const O11Y_DEFAULT = 'https://otel-demo-a5630c.kb.us-east-1.aws.elastic.cloud';
 const SECURITY_DEFAULT = 'https://my-security-project-ac9463.kb.us-central1.gcp.elastic.cloud';
 const TIME = { from: 'now-24h', to: 'now' };
 
-// Discover: prefer fleet / gaming services after Vercel OTLP seed.
+const AETHER_SERVICES = [
+  'matchmaking',
+  'auth',
+  'session-gateway',
+  'store',
+  'aether-games-fleet',
+];
+
+const AETHER_SERVICE_WHERE = `service.name IN (${AETHER_SERVICES.map((s) => `"${s}"`).join(', ')})`;
+
+// Discover: Aether gaming services only (otel-demo also holds other tenants).
 export const AETHER_DISCOVER_ESQL = [
   'FROM metrics-*',
-  '| WHERE service.name IS NOT NULL',
+  `| WHERE ${AETHER_SERVICE_WHERE}`,
   '| STATS metric_points = COUNT(*) BY service.name',
   '| SORT metric_points DESC',
   '| LIMIT 15',
@@ -29,7 +39,7 @@ export const AETHER_AUTH_ESQL = [
 
 export const AETHER_TRACES_ESQL = [
   'FROM traces-*',
-  '| WHERE service.name IS NOT NULL',
+  `| WHERE ${AETHER_SERVICE_WHERE}`,
   '| STATS spans = COUNT(*) BY service.name',
   '| SORT spans DESC',
   '| LIMIT 15',
