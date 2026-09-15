@@ -152,24 +152,23 @@ export function kibanaObservabilityServicesUrl(kibanaBase, { serviceName } = {})
   });
   if (serviceName) {
     params.set('kuery', `service.name : "${serviceName}"`);
-  } else {
-    params.set(
-      'kuery',
-      'service.name : "matchmaking" or service.name : "auth" or service.name : "session-gateway" or service.name : "store" or service.name : "aether-games-fleet"',
-    );
   }
   return `${base}/app/apm/services?${params.toString()}`;
 }
 
-export function kibanaApmServiceUrl(kibanaBase, serviceName = 'matchmaking') {
+export function kibanaApmServiceUrl(kibanaBase, serviceName = 'matchmaking', tab = 'transactions') {
   const base = (kibanaBase || getO11yKibanaUrl()).replace(/\/$/, '');
+  const page = ['overview', 'transactions', 'metrics', 'errors', 'dependencies'].includes(tab)
+    ? tab
+    : 'transactions';
   const params = new URLSearchParams({
     comparisonEnabled: 'true',
     environment: 'ENVIRONMENT_ALL',
     rangeFrom: 'now-24h',
     rangeTo: 'now',
+    transactionType: 'request',
   });
-  return `${base}/app/apm/services/${encodeURIComponent(serviceName)}/overview?${params.toString()}`;
+  return `${base}/app/apm/services/${encodeURIComponent(serviceName)}/${page}?${params.toString()}`;
 }
 
 /**

@@ -62,6 +62,43 @@ function nowNano() {
   return `${BigInt(Date.now()) * 1000000n}`;
 }
 
+function msToNano(ms) {
+  return `${BigInt(Math.floor(ms)) * 1000000n}`;
+}
+
+function kv(key, stringValue) {
+  return { key, value: { stringValue } };
+}
+
+function serviceResource(svc, instance) {
+  return {
+    attributes: [
+      kv('service.name', svc),
+      kv('service.instance.id', instance),
+      kv('deployment.environment', 'vercel-demo'),
+      kv('host.name', instance),
+      kv('telemetry.sdk.name', 'opentelemetry'),
+      kv('telemetry.sdk.language', 'nodejs'),
+      kv('telemetry.sdk.version', '1.27.0'),
+      kv('aether.studio', 'Aether Games'),
+    ],
+  };
+}
+
+/** APM Metrics charts host/process series, not custom Prom names. Spread points so Last 15m and Last 24h both hit. */
+function gaugeSeries(nowMs, hours, valueFn) {
+  const points = [];
+  const steps = 36;
+  const stepMs = (hours * 3600_000) / steps;
+  for (let i = steps; i >= 0; i--) {
+    points.push({
+      asDouble: valueFn(i / steps),
+      timeUnixNano: msToNano(nowMs - i * stepMs),
+    });
+  }
+  return points;
+}
+
 function hexId(bytes) {
   return randomBytes(bytes).toString('hex');
 }
@@ -75,40 +112,65 @@ function pick(arr) {
 }
 
 function buildMetricsPayload() {
+  const nowMs = Date.now();
   const t = nowNano();
   const resourceMetrics = SERVICES.map((svc) => {
+    const instance = `${svc}-usw-1`;
+    const cpu = gaugeSeries(nowMs, 2, (p) => 0.12 + Math.sin(p * Math.PI * 4) * 0.08 + Math.random() * 0.04);
+    const rss = gaugeSeries(nowMs, 2, (p) => 180_000_000 + p * 12_000_000 + Math.random() * 8_000_000);
+    const heapUsed = gaugeSeries(nowMs, 2, (p) => 95_000_000 + p * 8_000_000 + Math.random() * 4_000_000);
+    const heapTotal = gaugeSeries(nowMs, 2, () => 160_000_000 + Math.random() * 6_000_000);
+    const eventLoop = gaugeSeries(nowMs, 2, () => 1.2 + Math.random() * 4.5);
+
     const metrics = [
+      { name: 'system.cpu.utilization', unit: '1', gauge: { dataPoints: cpu } },
+      { name: 'process.cpu.utilization', unit: '1', gauge: { dataPoints: cpu } },
+      { name: 'process.memory.usage', unit: 'By', gauge: { dataPoints: rss } },
       {
-        name: 'http_requests_total',
-        sum: {
-          aggregationTemporality: 2,
-          isMonotonic: true,
+        name: 'system.memory.utilization',
+        unit: '1',
+        gauge: { dataPoints: gaugeSeries(nowMs, 2, () => 0.42 + Math.random() * 0.08) },
+      },
+      { name: 'process.runtime.nodejs.memory.heap.used', unit: 'By', gauge: { dataPoints: heapUsed } },
+      { name: 'process.runtime.nodejs.memory.heap.total', unit: 'By', gauge: { dataPoints: heapTotal } },
+      { name: 'process.runtime.nodejs.event_loop.delay.max', unit: 'ms', gauge: { dataPoints: eventLoop } },
+      { name: 'nodejs.memory.heap.used.bytes', unit: 'By', gauge: { dataPoints: heapUsed } },
+      { name: 'nodejs.eventloop.delay.avg.ms', unit: 'ms', gauge: { dataPoints: eventLoop } },
+      {
+        name: 'http.server.request.duration',
+        unit: 's',
+        histogram: {
+          aggregationTemporality: 1,
           dataPoints: [
             {
-              asDouble: 400 + Math.floor(Math.random() * 600),
+              startTimeUnixNano: msToNano(nowMs - 60_000),
               timeUnixNano: t,
+              count: `${randInt(80, 180)}`,
+              sum: 2.4 + Math.random() * 0.8,
+              bucketCounts: ['20', '40', '30', '20', '10'],
+              explicitBounds: [0.05, 0.1, 0.2, 0.5],
               attributes: [
-                { key: 'http.method', value: { stringValue: 'POST' } },
-                { key: 'http.status_code', value: { intValue: '200' } },
+                kv('http.request.method', 'POST'),
+                kv('http.route', `/${svc}`),
+                { key: 'http.response.status_code', value: { intValue: '200' } },
               ],
             },
           ],
         },
       },
       {
-        name: 'http_server_duration',
-        unit: 'ms',
-        histogram: {
-          aggregationTemporality: 2,
+        name: 'http_requests_total',
+        sum: {
+          aggregationTemporality: 1,
+          isMonotonic: true,
           dataPoints: [
             {
-              startTimeUnixNano: t,
+              asDouble: 400 + Math.floor(Math.random() * 600),
               timeUnixNano: t,
-              count: `${randInt(80, 180)}`,
-              sum: 2400 + Math.random() * 800,
-              bucketCounts: ['20', '40', '30', '20', '10'],
-              explicitBounds: [50, 100, 200, 500],
-              attributes: [{ key: 'http.route', value: { stringValue: `/${svc}` } }],
+              attributes: [
+                kv('http.method', 'POST'),
+                { key: 'http.status_code', value: { intValue: '200' } },
+              ],
             },
           ],
         },
@@ -123,7 +185,7 @@ function buildMetricsPayload() {
             {
               asDouble: 80 + Math.floor(Math.random() * 200),
               timeUnixNano: t,
-              attributes: [{ key: 'region', value: { stringValue: 'us-west' } }],
+              attributes: [kv('region', 'us-west')],
             },
           ],
         },
@@ -133,13 +195,13 @@ function buildMetricsPayload() {
       metrics.push({
         name: 'aether_auth_logins_total',
         sum: {
-          aggregationTemporality: 2,
+          aggregationTemporality: 1,
           isMonotonic: true,
           dataPoints: [
             {
               asDouble: 200 + Math.floor(Math.random() * 180),
               timeUnixNano: t,
-              attributes: [{ key: 'result', value: { stringValue: 'success' } }],
+              attributes: [kv('result', 'success')],
             },
           ],
         },
@@ -153,7 +215,7 @@ function buildMetricsPayload() {
             {
               asDouble: 180000 + Math.floor(Math.random() * 20000),
               timeUnixNano: t,
-              attributes: [{ key: 'region', value: { stringValue: 'us-west' } }],
+              attributes: [kv('region', 'us-west')],
             },
           ],
         },
@@ -161,13 +223,7 @@ function buildMetricsPayload() {
     }
 
     return {
-      resource: {
-        attributes: [
-          { key: 'service.name', value: { stringValue: svc } },
-          { key: 'deployment.environment', value: { stringValue: 'vercel-demo' } },
-          { key: 'aether.studio', value: { stringValue: 'Aether Games' } },
-        ],
-      },
+      resource: serviceResource(svc, instance),
       scopeMetrics: [{ scope: { name: 'aether.games.vercel', version: '1.0.0' }, metrics }],
     };
   });
@@ -241,13 +297,7 @@ function buildTracesPayload() {
     }
 
     return {
-      resource: {
-        attributes: [
-          { key: 'service.name', value: { stringValue: svc } },
-          { key: 'deployment.environment', value: { stringValue: 'vercel-demo' } },
-          { key: 'telemetry.sdk.language', value: { stringValue: 'nodejs' } },
-        ],
-      },
+      resource: serviceResource(svc, `${svc}-usw-1`),
       scopeSpans: [{ scope: { name: 'aether.games.vercel', version: '1.0.0' }, spans }],
     };
   });
@@ -347,7 +397,7 @@ export default async function handler(req, res) {
         body: lastTraces?.ok ? undefined : lastTraces?.body,
       },
       services: SERVICES.filter((s) => s !== 'aether-games-fleet'),
-      hint: 'Wait ~30–60s, then refresh APM Transactions (Last 24h). Most volume is in the last 2 hours.',
+      hint: 'Wait ~30–60s, then APM → matchmaking → Transactions and Metrics (Last 24h). Process CPU/memory is seeded for the Metrics tab.',
     });
   } catch (err) {
     json(res, 500, { error: err instanceof Error ? err.message : String(err) });

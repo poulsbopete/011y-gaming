@@ -245,7 +245,7 @@ export function LaunchNightDemo() {
         <StatCard
           label="Matchmaking"
           value="APM"
-          trend="Transactions after seed"
+          trend="Transactions · Last 24h"
           href={matchmakingHref}
         />
         <StatCard
@@ -273,8 +273,9 @@ export function LaunchNightDemo() {
           </div>
           <Sparkline series={series} />
           <p className="text-xs text-mist mt-4 leading-relaxed max-w-lg">
-            Sparkline is illustration only. Real latency and throughput are in APM after seed.
-            The workflow on{' '}
+            Sparkline is illustration only. Real latency and throughput are in APM after seed
+            (Transactions, Last 24h). The Metrics tab needs process CPU/memory from that same seed —
+            Last 15 minutes often misses the OTel window on this shared project. The workflow on{' '}
             <span className="font-mono text-cyan">{project}</span> is the source of truth.
           </p>
         </div>
