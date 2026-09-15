@@ -196,9 +196,13 @@ export default async function handler(req, res) {
 
     const executionId =
       run.body?.executionId ||
+      run.body?.workflowExecutionId ||
       run.body?.id ||
       run.body?.execution_id ||
-      (typeof run.body?.data === 'object' ? run.body.data.executionId || run.body.data.id : null);
+      run.body?.data?.executionId ||
+      run.body?.data?.workflowExecutionId ||
+      run.body?.data?.id ||
+      null;
 
     if (!run.ok) {
       json(res, 502, {
@@ -213,6 +217,8 @@ export default async function handler(req, res) {
       ok: true,
       workflowId: WORKFLOW_ID,
       executionId,
+      runStatus: run.status,
+      runKeys: run.body && typeof run.body === 'object' ? Object.keys(run.body) : [],
       workflowHref,
       executionHref: executionId
         ? `${kibana}/app/workflows/${WORKFLOW_ID}`
