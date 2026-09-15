@@ -31,7 +31,7 @@ function buildSeries(points, spikeAt) {
   });
 }
 
-function Sparkline({ series, accent = '#2dd4bf', animate }) {
+function Sparkline({ series, accent = '#00aeff', animate }) {
   const w = 320;
   const h = 72;
   const max = Math.max(...series, 1);
@@ -264,7 +264,7 @@ export function LaunchNightDemo() {
           </div>
           <Sparkline
             series={series}
-            accent={phase === 'running' ? '#e8a838' : '#2dd4bf'}
+            accent={phase === 'running' ? '#ffb81c' : '#00aeff'}
             animate={phase !== 'idle'}
           />
           <p className="text-xs text-mist mt-4 leading-relaxed max-w-lg">

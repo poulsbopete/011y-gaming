@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-  --font-display: "Syne", ui-sans-serif, system-ui, sans-serif;
-  --font-body: "DM Sans", ui-sans-serif, system-ui, sans-serif;
-  --color-arena: #06090f;
-  --color-arena-elevated: #0c121c;
-  --color-cyan: #2dd4bf;
-  --color-amber: #e8a838;
-  --color-mist: #8b9cb3;
-  --color-fog: #e8eef6;
+  --font-display: "Oswald", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
+  --color-arena: #0a0c12;
+  --color-arena-elevated: #12161f;
+  --color-cyan: #00aeff;
+  --color-amber: #ffb81c;
+  --color-mist: #9aa3b2;
+  --color-fog: #f3f5f8;
 }
 
 html {
@@ -25,21 +25,22 @@ body {
 
 .font-display {
   font-family: var(--font-display);
+  letter-spacing: 0.04em;
 }
 
-/* Atmosphere — soft radial washes, not flat black */
+/* Atmosphere — deep navy + launcher blue / gold washes */
 .app-atmosphere {
   background:
-    radial-gradient(ellipse 90% 55% at 10% -10%, rgba(45, 212, 191, 0.09), transparent 55%),
-    radial-gradient(ellipse 70% 45% at 95% 5%, rgba(232, 168, 56, 0.06), transparent 50%),
-    radial-gradient(ellipse 60% 40% at 50% 100%, rgba(14, 21, 32, 0.9), transparent 70%),
-    linear-gradient(180deg, #06090f 0%, #080d16 40%, #06090f 100%);
+    radial-gradient(ellipse 90% 55% at 8% -8%, rgba(0, 174, 255, 0.16), transparent 55%),
+    radial-gradient(ellipse 70% 45% at 96% 4%, rgba(255, 184, 28, 0.08), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 50% 100%, rgba(0, 40, 72, 0.55), transparent 70%),
+    linear-gradient(180deg, #080a10 0%, #0c121c 42%, #080a10 100%);
 }
 
 .app-grid {
   background-image:
-    linear-gradient(rgba(232, 238, 246, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(232, 238, 246, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(0, 174, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 174, 255, 0.045) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 20%, transparent 75%);
 }
@@ -87,13 +88,13 @@ body {
 }
 
 @keyframes panel-glow-cyan {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(45, 212, 191, 0); }
-  50% { box-shadow: 0 0 20px -6px rgba(45, 212, 191, 0.2); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 174, 255, 0); }
+  50% { box-shadow: 0 0 22px -4px rgba(0, 174, 255, 0.28); }
 }
 
 @keyframes panel-glow-amber {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(232, 168, 56, 0); }
-  50% { box-shadow: 0 0 20px -6px rgba(232, 168, 56, 0.18); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 184, 28, 0); }
+  50% { box-shadow: 0 0 22px -4px rgba(255, 184, 28, 0.22); }
 }
 
 .a2a-bridge {

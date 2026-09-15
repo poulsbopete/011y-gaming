@@ -17,7 +17,7 @@ export function ExtLink({ href, children, className = '' }) {
 
 export function PrimaryCta({ href, children, external = true, onClick, disabled }) {
   const cls =
-    'inline-flex items-center justify-center gap-2 rounded-md bg-cyan px-5 py-2.5 font-display text-sm font-bold text-arena hover:bg-amber transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
+    'inline-flex items-center justify-center gap-2 rounded-sm bg-cyan px-5 py-2.5 font-display text-sm font-semibold uppercase tracking-[0.12em] text-white hover:bg-amber hover:text-arena transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
   if (onClick || !href) {
     return (
       <button type="button" onClick={onClick} disabled={disabled} className={cls}>
@@ -34,7 +34,7 @@ export function PrimaryCta({ href, children, external = true, onClick, disabled 
 
 export function GhostCta({ href, children, external = true, onClick, disabled }) {
   const cls =
-    'inline-flex items-center justify-center gap-2 rounded-md border border-white/18 px-5 py-2.5 font-display text-sm text-fog hover:border-cyan hover:text-cyan transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
+    'inline-flex items-center justify-center gap-2 rounded-sm border border-white/18 px-5 py-2.5 font-display text-sm font-semibold uppercase tracking-[0.12em] text-fog hover:border-cyan hover:text-cyan transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
   if (onClick || !href) {
     return (
       <button type="button" onClick={onClick} disabled={disabled} className={cls}>
@@ -55,9 +55,9 @@ export function ModuleHeader({ eyebrow, title, subtitle, actions, children }) {
     <header className="mb-8 md:mb-10 overflow-visible">
       <div className="rise-in">
         {eyebrow && (
-          <p className="text-[11px] uppercase tracking-[0.22em] text-amber mb-3 font-medium">{eyebrow}</p>
+          <p className="text-[11px] uppercase tracking-[0.28em] text-amber mb-3 font-medium">{eyebrow}</p>
         )}
-        <h1 className="font-display text-3xl md:text-[2.75rem] font-bold text-fog tracking-tight leading-[1.15] max-w-3xl pb-1">
+        <h1 className="font-display text-3xl md:text-[2.75rem] font-semibold text-fog tracking-wide leading-[1.12] max-w-3xl pb-1">
           {title}
         </h1>
         {subtitle && (
@@ -134,9 +134,9 @@ export function Section({ id, eyebrow, title, lead, children }) {
     <section id={id} className="relative px-6 py-20 md:py-28 border-t border-white/8">
       <div className="mx-auto max-w-5xl">
         {eyebrow && (
-          <p className="text-xs uppercase tracking-[0.2em] text-amber mb-3 font-medium">{eyebrow}</p>
+          <p className="text-xs uppercase tracking-[0.28em] text-amber mb-3 font-medium">{eyebrow}</p>
         )}
-        <h2 className="font-display text-3xl md:text-4xl font-bold text-fog mb-3">{title}</h2>
+        <h2 className="font-display text-3xl md:text-4xl font-semibold text-fog mb-3 tracking-wide">{title}</h2>
         {lead && <p className="text-mist max-w-2xl text-base md:text-lg mb-10 leading-relaxed">{lead}</p>}
         {children}
       </div>

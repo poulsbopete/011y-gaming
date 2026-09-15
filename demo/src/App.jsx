@@ -42,7 +42,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setActive('launch')}
-              className="font-display text-xl font-extrabold tracking-tight text-fog"
+              className="font-display text-lg font-semibold uppercase tracking-[0.16em] text-fog"
             >
               Aether <span className="text-cyan">Games</span>
             </button>
@@ -55,7 +55,7 @@ export default function App() {
                     key={mod.id}
                     type="button"
                     onClick={() => setActive(mod.id)}
-                    className={`px-3 py-2 text-sm transition-colors relative ${
+                    className={`px-3 py-2 text-xs uppercase tracking-[0.14em] transition-colors relative ${
                       on ? 'text-fog font-semibold' : 'text-mist hover:text-fog'
                     }`}
                   >
@@ -107,7 +107,7 @@ export default function App() {
       <footer className="relative border-t border-white/8 px-6 py-10 mt-8">
         <div className="mx-auto max-w-5xl flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
           <div>
-            <p className="font-display text-lg font-bold text-fog">
+            <p className="font-display text-base font-semibold uppercase tracking-[0.16em] text-fog">
               Aether <span className="text-cyan">Games</span>
             </p>
             <p className="text-xs text-mist mt-1.5 max-w-sm leading-relaxed">

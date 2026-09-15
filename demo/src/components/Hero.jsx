@@ -11,14 +11,14 @@ export function Hero() {
         className="pointer-events-none absolute inset-0 hero-glow"
         style={{
           background:
-            'radial-gradient(ellipse 80% 60% at 70% 20%, rgba(34,211,238,0.18), transparent 55%), radial-gradient(ellipse 50% 40% at 15% 80%, rgba(251,191,36,0.12), transparent 50%), linear-gradient(180deg, #070b12 0%, #0a1220 45%, #070b12 100%)',
+            'radial-gradient(ellipse 80% 60% at 70% 20%, rgba(0,174,255,0.22), transparent 55%), radial-gradient(ellipse 50% 40% at 15% 80%, rgba(255,184,28,0.12), transparent 50%), linear-gradient(180deg, #080a10 0%, #0c1522 45%, #080a10 100%)',
         }}
       />
       <div
         className="pointer-events-none absolute inset-0 opacity-30"
         style={{
           backgroundImage:
-            'linear-gradient(rgba(34,211,238,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,0.06) 1px, transparent 1px)',
+            'linear-gradient(rgba(0,174,255,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(0,174,255,0.07) 1px, transparent 1px)',
           backgroundSize: '48px 48px',
           maskImage: 'radial-gradient(ellipse at center, black 20%, transparent 75%)',
         }}
