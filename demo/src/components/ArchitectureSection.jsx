@@ -7,6 +7,7 @@ import {
   kibanaSecurityUrl,
   kibanaObservabilityServicesUrl,
 } from '../lib/elastic-api';
+import { staticUrl } from '../lib/apiBase';
 
 const O11Y_ITEMS = [
   'metrics / logs / traces',
@@ -30,7 +31,7 @@ export function ArchitectureSection({ embedded = false } = {}) {
   const o11yKibana = getO11yKibanaUrl();
   const o11yEs = getO11yEsUrl().replace(/^https?:\/\//, '');
   const securityEs = getSecurityEsUrl().replace(/^https?:\/\//, '');
-  const o11yProject = o11yEs.split('.')[0] || 'otel-demo-a5630c';
+  const o11yProject = o11yEs.split('.')[0] || 'elastic-observability-f74145';
   const securityProject = securityEs.split('.')[0] || 'my-security-project-ac9463';
 
   const shellClass = embedded
@@ -63,7 +64,7 @@ export function ArchitectureSection({ embedded = false } = {}) {
             </p>
           </div>
           <a
-            href="/aether-a2a-architecture.jpg"
+            href={staticUrl('/aether-a2a-architecture.jpg')}
             download="aether-a2a-architecture.jpg"
             className="shrink-0 inline-flex items-center gap-2 text-xs text-mist hover:text-cyan transition-colors border border-white/10 px-3 py-2 rounded-md"
           >

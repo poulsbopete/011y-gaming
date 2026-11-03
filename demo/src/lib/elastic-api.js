@@ -1,4 +1,4 @@
-const O11Y_DEFAULT = 'https://otel-demo-a5630c.kb.us-east-1.aws.elastic.cloud';
+const O11Y_DEFAULT = 'https://elastic-observability-f74145.kb.centralus.azure.elastic.cloud';
 const SECURITY_DEFAULT = 'https://my-security-project-ac9463.kb.us-central1.gcp.elastic.cloud';
 const TIME = { from: 'now-24h', to: 'now' };
 
@@ -74,7 +74,7 @@ export function getSecurityKibanaUrl() {
 }
 
 export function getO11yEsUrl() {
-  return (import.meta.env.VITE_ES_URL || 'https://otel-demo-a5630c.es.us-east-1.aws.elastic.cloud').replace(/\/$/, '');
+  return (import.meta.env.VITE_ES_URL || 'https://elastic-observability-f74145.es.centralus.azure.elastic.cloud').replace(/\/$/, '');
 }
 
 export function getSecurityEsUrl() {

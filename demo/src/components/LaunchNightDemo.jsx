@@ -18,6 +18,7 @@ import {
   AETHER_LAUNCH_OPS_DASHBOARD_ID,
   LAUNCH_NIGHT_WORKFLOW_ID,
 } from '../lib/elastic-api';
+import { apiUrl } from '../lib/apiBase';
 
 const WORKFLOW_STEPS = [
   { id: 'metrics', label: 'ES|QL probe metrics-* (matchmaking / auth / session)' },
@@ -98,7 +99,7 @@ export function LaunchNightDemo() {
 
     async function poll() {
       try {
-        const r = await fetch(`/api/run-launch-night?executionId=${encodeURIComponent(executionId)}`);
+        const r = await fetch(apiUrl(`/api/run-launch-night?executionId=${encodeURIComponent(executionId)}`));
         const body = await r.json().catch(() => ({}));
         if (cancelled) return;
         if (body.steps) setStepById((prev) => ({ ...prev, ...body.steps }));
@@ -142,7 +143,7 @@ export function LaunchNightDemo() {
     lastLogged.current = '';
     pushLog('POST Kibana workflow Aether — Launch night incident');
     try {
-      const r = await fetch('/api/run-launch-night', { method: 'POST' });
+      const r = await fetch(apiUrl('/api/run-launch-night'), { method: 'POST' });
       const body = await r.json().catch(() => ({}));
       if (!r.ok) {
         setRunning(false);
@@ -173,7 +174,7 @@ export function LaunchNightDemo() {
   async function seedMetrics() {
     setSeeding(true);
     try {
-      const r = await fetch('/api/seed-metrics', { method: 'POST' });
+      const r = await fetch(apiUrl('/api/seed-metrics'), { method: 'POST' });
       const body = await r.json().catch(() => ({}));
       if (!r.ok) {
         pushLog(`Seed failed: ${body.error || r.status}`);

@@ -10,9 +10,9 @@ Elastic inventories those **migrated** dashboards → the indexes they query, KE
 
 | Surface | URL |
 | --- | --- |
-| Dashboard **Horizon — Dashboard sprawl** | https://otel-demo-a5630c.kb.us-east-1.aws.elastic.cloud/app/dashboards#/view/horizon-dashboard-sprawl |
-| Workflow **Dashboard schema drift check** | https://otel-demo-a5630c.kb.us-east-1.aws.elastic.cloud/app/workflows/dashboard-schema-drift-check |
-| Alert **Dashboard schema drift** | https://otel-demo-a5630c.kb.us-east-1.aws.elastic.cloud/app/management/insightsAndAlerting/triggersActions/rule/dashboard-schema-drift |
+| Dashboard **Horizon — Dashboard sprawl** | https://elastic-observability-f74145.kb.centralus.azure.elastic.cloud/app/dashboards#/view/horizon-dashboard-sprawl |
+| Workflow **Dashboard schema drift check** | https://elastic-observability-f74145.kb.centralus.azure.elastic.cloud/app/workflows/dashboard-schema-drift-check |
+| Alert **Dashboard schema drift** | https://elastic-observability-f74145.kb.centralus.azure.elastic.cloud/app/management/insightsAndAlerting/triggersActions/rule/dashboard-schema-drift |
 
 Indexes: `dashboard-index-usage`, `dashboard-widget-fields`, `dashboard-schema-drift`. Inventory is from **live dashboard definitions** (no `.elastic-audit-*` on Serverless).
 

@@ -22,7 +22,7 @@ Dual deliverable for gaming platform POV conversations:
 
 | Project | Kibana |
 | --- | --- |
-| Observability | `https://otel-demo-a5630c.kb.us-east-1.aws.elastic.cloud` |
+| Observability | `https://elastic-observability-f74145.kb.centralus.azure.elastic.cloud` |
 | Security | `https://my-security-project-ac9463.kb.us-central1.gcp.elastic.cloud` |
 
 ## Instruqt track

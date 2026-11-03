@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Shield, AlertTriangle, FolderOpen, Crosshair } from 'lucide-react';
 import { ModuleHeader, DeepLinkBar, PrimaryCta } from './ui';
 import { kibanaSecurityUrl, getSecurityKibanaUrl } from '../lib/elastic-api';
+import { apiUrl } from '../lib/apiBase';
 
 const SEED_ALERTS = [
   {
@@ -74,7 +75,7 @@ export function FraudLab() {
     setCreatingCase(true);
     setCaseNote(null);
     try {
-      const r = await fetch('/api/create-case', {
+      const r = await fetch(apiUrl('/api/create-case'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -119,7 +120,7 @@ export function FraudLab() {
     setSeeding(true);
     setSeedMsg(null);
     try {
-      const r = await fetch('/api/seed-fraud', { method: 'POST' });
+      const r = await fetch(apiUrl('/api/seed-fraud'), { method: 'POST' });
       const body = await r.json().catch(() => ({}));
       if (!r.ok || body.ok === false) {
         const detail =

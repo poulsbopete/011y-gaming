@@ -14,7 +14,7 @@ Platform / SRE / observability owners at gaming companies consolidating Promethe
 
 | Concern | Instruqt | Vercel |
 | --- | --- | --- |
-| Observability project | Ephemeral per play | Fixed `otel-demo-a5630c` |
+| Observability project | Ephemeral per play | Fixed `elastic-observability-f74145` |
 | Security project | Not provisioned (A2A stub) | Fixed `my-security-project-ac9463` deep links |
 | Hands-on migrate | Yes (`grafana-migrate`) | No (narrative + links) |
 
