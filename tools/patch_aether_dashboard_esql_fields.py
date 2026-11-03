@@ -45,7 +45,12 @@ def kibana_client() -> tuple[str, dict[str, str], Any]:
     api_key = (os.environ.get("KIBANA_API_KEY") or os.environ.get("ES_API_KEY") or "").strip()
     user = (os.environ.get("ES_USERNAME") or "").strip()
     password = (os.environ.get("ES_PASSWORD") or "").strip()
-    headers: dict[str, str] = {"kbn-xsrf": "true", "Content-Type": "application/json"}
+    headers: dict[str, str] = {
+        "kbn-xsrf": "true",
+        "Content-Type": "application/json",
+        # Required on Observability Serverless for /api/saved_objects/_find
+        "x-elastic-internal-origin": "kibana",
+    }
     auth: Any = None
     if api_key:
         headers["Authorization"] = f"ApiKey {api_key}"
