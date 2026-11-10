@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
+import { ServerlessPoc } from './components/ServerlessPoc';
 import { LaunchNightDemo } from './components/LaunchNightDemo';
 import { WhyElasticSection } from './components/WhyElasticSection';
 import { MigrateSection } from './components/MigrateSection';
@@ -9,6 +10,7 @@ import { ArchitectureSection } from './components/ArchitectureSection';
 import { getInstruqtInviteUrl } from './lib/elastic-api';
 
 const MODULES = [
+  { id: 'poc', label: 'Serverless POC', live: true },
   { id: 'launch', label: 'Launch night', live: true },
   { id: 'sprawl', label: 'Broken widgets', live: true },
   { id: 'migrate', label: 'Migrate' },
@@ -18,6 +20,7 @@ const MODULES = [
 ];
 
 const MODULE_COMPONENTS = {
+  poc: ServerlessPoc,
   launch: LaunchNightDemo,
   sprawl: DashboardSprawlLab,
   why: WhyElasticSection,
@@ -27,7 +30,7 @@ const MODULE_COMPONENTS = {
 };
 
 export default function App() {
-  const [active, setActive] = useState('launch');
+  const [active, setActive] = useState('poc');
   const [mobileOpen, setMobileOpen] = useState(false);
   const invite = getInstruqtInviteUrl();
   const Active = MODULE_COMPONENTS[active];
@@ -41,7 +44,7 @@ export default function App() {
           <div className="flex items-center justify-between h-16">
             <button
               type="button"
-              onClick={() => setActive('launch')}
+              onClick={() => setActive('poc')}
               className="font-display text-lg font-semibold uppercase tracking-[0.16em] text-fog"
             >
               Blizzard <span className="text-cyan">× Elastic</span>

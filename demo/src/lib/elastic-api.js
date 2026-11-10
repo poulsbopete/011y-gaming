@@ -125,10 +125,18 @@ export const HORIZON_SPRAWL_DASHBOARD_ID = 'horizon-dashboard-sprawl';
 export const DASHBOARD_SCHEMA_DRIFT_WORKFLOW_ID = 'dashboard-schema-drift-check';
 export const DASHBOARD_SCHEMA_DRIFT_RULE_ID = 'dashboard-schema-drift';
 export const LAUNCH_NIGHT_WORKFLOW_ID = 'aether-launch-night';
+/** Product workflow from Elastic Workflows Template Library (broken-widget-hunter). */
+export const BROKEN_WIDGET_HUNTER_WORKFLOW_ID = 'broken-widget-hunter';
 
 export function kibanaWorkflowUrl(kibanaBase, workflowId) {
   const base = (kibanaBase || getO11yKibanaUrl()).replace(/\/$/, '');
   return `${base}/app/workflows/${encodeURIComponent(workflowId)}`;
+}
+
+/** Workflows app — Template Library tab (Broken Widget Hunter ships here). */
+export function kibanaWorkflowsLibraryUrl(kibanaBase) {
+  const base = (kibanaBase || getO11yKibanaUrl()).replace(/\/$/, '');
+  return `${base}/app/workflows`;
 }
 
 export function kibanaManagementRuleUrl(kibanaBase, ruleId) {

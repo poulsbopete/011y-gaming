@@ -8,9 +8,11 @@ import {
   kibanaWorkflowUrl,
   kibanaManagementRuleUrl,
   kibanaDashboardsUrl,
+  kibanaWorkflowsLibraryUrl,
   HORIZON_SPRAWL_DASHBOARD_ID,
   DASHBOARD_SCHEMA_DRIFT_WORKFLOW_ID,
   DASHBOARD_SCHEMA_DRIFT_RULE_ID,
+  BROKEN_WIDGET_HUNTER_WORKFLOW_ID,
 } from '../lib/elastic-api';
 
 const FOLDER = [
@@ -68,9 +70,9 @@ const STEPS = [
   { id: 'live', label: 'Grafana boards already live on Observability Serverless' },
   { id: 'dev', label: 'Engineers ship a rename / drop a label — nobody filed a ticket' },
   { id: 'blank', label: 'Matchmaking + session widgets go blank in Kibana' },
-  { id: 'detect', label: 'KEEP probes fail; Horizon flags the fields those widgets still query' },
+  { id: 'detect', label: 'Broken Widget Hunter scans ES|QL — Unknown column / index failures' },
+  { id: 'case', label: 'Hunter opens or updates an Observability Case (Template Library workflow)' },
   { id: 'ai', label: 'Agent Builder maps old fields → what is actually in the index' },
-  { id: 'repair', label: 'AI remaps the widget queries — panels live again' },
 ];
 
 const statusColor = {
@@ -84,6 +86,8 @@ export function DashboardSprawlLab() {
   const project = kibanaHostLabel(kibana);
   const sprawlHref = kibanaDashboardViewUrl(kibana, HORIZON_SPRAWL_DASHBOARD_ID);
   const workflowHref = kibanaWorkflowUrl(kibana, DASHBOARD_SCHEMA_DRIFT_WORKFLOW_ID);
+  const hunterHref = kibanaWorkflowUrl(kibana, BROKEN_WIDGET_HUNTER_WORKFLOW_ID);
+  const libraryHref = kibanaWorkflowsLibraryUrl(kibana);
   const ruleHref = kibanaManagementRuleUrl(kibana, DASHBOARD_SCHEMA_DRIFT_RULE_ID);
   const listHref = kibanaDashboardsUrl(kibana);
 
@@ -168,18 +172,18 @@ export function DashboardSprawlLab() {
       setWatched(80);
       setDrift(3);
       markStep(2, 3);
-      pushLog('DETECT: FROM metrics-* | KEEP `region` | LIMIT 1 → fail → dashboard-schema-drift');
-      pushLog('Horizon: 3 widgets still query fields that are no longer in the index');
+      pushLog('HUNTER: Broken Widget Hunter (Template Library) — Unknown column [region]');
+      pushLog('Horizon inventory: 3 widgets still query fields missing from the index');
     }, 3300);
 
     schedule(() => {
       markStep(3, 4);
-      pushLog('Agent Builder: `region` last present as `labels.region`; duration as `http.server.request.duration`');
+      pushLog('Case: [Auto-ops] Broken dashboard widgets detected — tag broken-widget');
     }, 4400);
 
     schedule(() => {
       markStep(4, 5);
-      pushLog('AI remapping widget ES|QL on Matchmaking, Session gateway, Dependency latency');
+      pushLog('Agent Builder: `region` → `labels.region`; duration → `http.server.request.duration`');
     }, 5400);
 
     schedule(() => {
@@ -188,7 +192,7 @@ export function DashboardSprawlLab() {
       setDrift(0);
       setSteps((prev) => prev.map((s) => ({ ...s, status: 'done' })));
       setPhase('done');
-      pushLog('KEEP probes passing — 3 widgets restored by AI. Open Horizon — Dashboard sprawl');
+      pushLog('Widgets restored — hunter Case updated. Product path: Workflows → Template Library → Broken widget hunter');
     }, 6500);
   }
 
@@ -199,8 +203,8 @@ export function DashboardSprawlLab() {
     <div>
       <ModuleHeader
         eyebrow="Broken widgets"
-        title="Developers change schema. Elastic detects it. AI remaps the widgets."
-        subtitle="Schema changes are not in the launch plan — but game and platform engineers rename metrics and drop labels all the time. After Grafana boards live on Observability Serverless, KEEP probes catch the blank widgets; Agent Builder maps old fields to what is actually in the index and remaps the queries."
+        title="Developers change schema. Broken Widget Hunter detects it."
+        subtitle="Schema changes are not in the launch plan — engineers rename metrics and drop labels anyway. After Grafana boards live on Observability Serverless, Broken Widget Hunter (Elastic Workflows Template Library) scans ES|QL, opens an Observability Case, and Agent Builder remaps fields that still exist in the index."
         actions={
           <div className="flex flex-wrap gap-3">
             <PrimaryCta onClick={phase === 'running' ? undefined : runBreakage} disabled={phase === 'running'}>
@@ -210,13 +214,15 @@ export function DashboardSprawlLab() {
             <GhostCta onClick={reset} disabled={phase === 'idle'}>
               Reset
             </GhostCta>
-            <GhostCta href={sprawlHref}>Open Horizon — Dashboard sprawl</GhostCta>
+            <GhostCta href={hunterHref}>Open Broken Widget Hunter</GhostCta>
           </div>
         }
       >
         <DeepLinkBar
           links={[
-            { label: 'Horizon — Dashboard sprawl', href: sprawlHref, primary: true },
+            { label: 'Broken Widget Hunter', href: hunterHref, primary: true },
+            { label: 'Template Library', href: libraryHref },
+            { label: 'Horizon — Dashboard sprawl', href: sprawlHref },
             { label: 'Schema drift workflow', href: workflowHref },
             { label: 'Drift alert rule', href: ruleHref },
             { label: 'All dashboards', href: listHref },
@@ -301,18 +307,17 @@ export function DashboardSprawlLab() {
             })}
           </ul>
           <p className="text-xs text-mist mt-4 leading-relaxed max-w-lg">
-            Simulation for the POV. Detection is the KEEP probe + Horizon inventory on{' '}
-            <span className="font-mono text-cyan">{project}</span>. Remap is Agent Builder
-            against live Kibana dashboard definitions. In the schema-drift workflow, Skipped /
-            Not started on the Executions tab is the step graph before a run — click Run there
-            (or wait for the 15m schedule). <code className="text-cyan">record_drift</code> stays
-            skipped when KEEP succeeds; that step only runs on probe failure.
+            Simulation for the POV. Product path is{' '}
+            <span className="text-fog">Broken Widget Hunter</span> from the Workflows Template
+            Library on <span className="font-mono text-cyan">{project}</span> — scan, Case, no
+            silent red widgets. Horizon inventory still shows which fields each board queries.
+            Schema-drift KEEP probes remain as a complementary 15m check.
           </p>
         </div>
 
         <div className="lg:col-span-2">
           <h2 className="font-display text-sm font-bold text-fog tracking-wide uppercase mb-4">
-            Detect + AI remap
+            Hunter + AI remap
           </h2>
           <ol className="space-y-3">
             {steps.map((s, i) => (
