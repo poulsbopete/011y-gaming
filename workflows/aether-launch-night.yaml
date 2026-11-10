@@ -1,14 +1,14 @@
 version: "1"
-name: Aether — Launch night incident
+name: Blizzard — Launch night incident
 description: |
   POV for a launch-window incident. Pulls live **metrics**, **traces**, and **logs**
   for matchmaking / auth / session-gateway, then Agent Builder writes a triage and
-  remediation brief. Manual run from the Aether Games demo (or Kibana → Workflows).
+  remediation brief. Manual run from the Blizzard demo (or Kibana → Workflows).
 
   Does not invent a fake spike — it reads what is already in Observability Serverless.
 enabled: true
 tags:
-  - aether-games
+  - blizzard
   - launch-night
   - DEMO
 triggers:
@@ -19,7 +19,7 @@ steps:
     type: console
     with:
       message: |
-        Aether launch-night workflow started (execution {{ execution.id }}).
+        Blizzard launch-night workflow started (execution {{ execution.id }}).
         Probing metrics-*, traces-*, logs-* for matchmaking / auth / session-gateway.
 
   - name: probe_metrics
@@ -30,7 +30,7 @@ steps:
       body:
         query: |
           FROM metrics-*
-          | WHERE service.name IN ("matchmaking", "auth", "session-gateway", "aether-games-fleet")
+          | WHERE service.name IN ("matchmaking", "auth", "session-gateway", "blizzard-fleet")
           | STATS metric_points = COUNT(*) BY service.name
           | SORT metric_points DESC
           | LIMIT 15
@@ -69,7 +69,7 @@ steps:
     type: ai.agent
     with:
       message: |
-        You are an SRE on **Aether Games** launch night. Observability Serverless just
+        You are an SRE on **Blizzard** launch night. Observability Serverless just
         returned these probes. Do not invent hosts, regions, or percentages that are not
         in the data.
 

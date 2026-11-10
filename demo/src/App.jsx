@@ -44,7 +44,7 @@ export default function App() {
               onClick={() => setActive('launch')}
               className="font-display text-lg font-semibold uppercase tracking-[0.16em] text-fog"
             >
-              Aether <span className="text-cyan">Games</span>
+              Blizzard <span className="text-cyan">× Elastic</span>
             </button>
 
             <nav className="hidden md:flex items-center gap-0.5">
@@ -108,10 +108,10 @@ export default function App() {
         <div className="mx-auto max-w-5xl flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
           <div>
             <p className="font-display text-base font-semibold uppercase tracking-[0.16em] text-fog">
-              Aether <span className="text-cyan">Games</span>
+              Blizzard <span className="text-cyan">× Elastic</span>
             </p>
             <p className="text-xs text-mist mt-1.5 max-w-sm leading-relaxed">
-              Fictional AAA publisher · Elastic Observability + Security demo for metrics adoption
+              Private November POC · Elastic Serverless Observability, Security, and Search
             </p>
           </div>
           <a

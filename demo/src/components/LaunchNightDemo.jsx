@@ -25,7 +25,7 @@ const WORKFLOW_STEPS = [
   { id: 'traces', label: 'ES|QL probe traces-* (APM spans by service)' },
   { id: 'logs', label: 'ES|QL probe logs-* (continue if empty)' },
   { id: 'agent', label: 'Agent Builder writes the launch-night brief' },
-  { id: 'index', label: 'Index the brief to aether-launch-night-runs' },
+  { id: 'index', label: 'Index the brief to launch-night-runs' },
 ];
 
 const IDLE_STEPS = Object.fromEntries(WORKFLOW_STEPS.map((s) => [s.id, 'pending']));
@@ -109,7 +109,7 @@ export function LaunchNightDemo() {
           setRunning(false);
           const summary =
             status === 'completed'
-              ? 'Execution complete — brief indexed to aether-launch-night-runs'
+              ? 'Execution complete — brief indexed to launch-night-runs'
               : `Execution ${status}`;
           if (summary !== lastLogged.current) {
             lastLogged.current = summary;
@@ -141,7 +141,7 @@ export function LaunchNightDemo() {
     setWfStatus('starting');
     setStepById({ ...IDLE_STEPS, metrics: 'running' });
     lastLogged.current = '';
-    pushLog('POST Kibana workflow Aether — Launch night incident');
+    pushLog('POST Kibana workflow Blizzard — Launch night incident');
     try {
       const r = await fetch(apiUrl('/api/run-launch-night'), { method: 'POST' });
       const body = await r.json().catch(() => ({}));
@@ -264,7 +264,7 @@ export function LaunchNightDemo() {
           label="Workflow"
           value={wfLabel}
           accent={wfStatus === 'failed' ? 'amber' : 'cyan'}
-          trend={executionId ? String(executionId).slice(0, 12) : 'aether-launch-night'}
+          trend={executionId ? String(executionId).slice(0, 12) : 'blizzard-launch-night'}
           href={workflowHref}
         />
       </div>

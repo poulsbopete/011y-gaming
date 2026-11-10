@@ -9,7 +9,7 @@ const SEED_ALERTS = [
     id: 'ALT-88421',
     severity: 'critical',
     title: 'Credential stuffing — account platform',
-    entity: 'player:aether-user-88421',
+    entity: 'player:blizzard-user-88421',
     signal: 'auth_failure_spike + known bad IP',
     region: 'us-west',
   },

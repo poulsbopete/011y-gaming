@@ -1,5 +1,5 @@
 /**
- * Seed Aether Games demo telemetry into Elastic Observability Serverless via mOTLP.
+ * Seed Blizzard POC demo telemetry into Elastic Observability Serverless via mOTLP.
  * Sends metrics + traces + logs so Discover, APM Transactions, Metrics, and Logs light up.
  * Uses server-only ES_URL + ES_API_KEY (never VITE_*).
  *
@@ -112,7 +112,7 @@ function serviceResource(svc, instance) {
       kv('telemetry.sdk.name', 'opentelemetry'),
       kv('telemetry.sdk.language', 'nodejs'),
       kv('telemetry.sdk.version', '1.27.0'),
-      kv('aether.studio', 'Aether Games'),
+      kv('aether.studio', 'Blizzard'),
     ],
   };
 }

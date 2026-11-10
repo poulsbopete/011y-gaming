@@ -1,5 +1,5 @@
 /**
- * Ensure + run the Kibana workflow "Aether — Launch night incident".
+ * Ensure + run the Kibana workflow "Blizzard — Launch night incident".
  *
  * POST /api/run-launch-night  → upsert YAML, then POST .../run
  * GET  /api/run-launch-night  → { configured, workflowHref }
@@ -9,13 +9,13 @@
 const WORKFLOW_ID = 'aether-launch-night';
 
 const WORKFLOW_YAML = `version: "1"
-name: Aether — Launch night incident
+name: Blizzard — Launch night incident
 description: |
-  POV for a launch-window incident. Pulls live metrics, traces, and logs
+  POV for a Blizzard launch-window incident. Pulls live metrics, traces, and logs
   for matchmaking / auth / session-gateway, then Agent Builder writes a triage brief.
 enabled: true
 tags:
-  - aether-games
+  - blizzard
   - launch-night
   - DEMO
 triggers:
@@ -25,7 +25,7 @@ steps:
     type: console
     with:
       message: |
-        Aether launch-night workflow started (execution {{ execution.id }}).
+        Blizzard launch-night workflow started (execution {{ execution.id }}).
         Probing metrics-*, traces-*, logs-* for matchmaking / auth / session-gateway.
   - name: probe_metrics
     type: elasticsearch.request
@@ -71,7 +71,7 @@ steps:
     type: ai.agent
     with:
       message: |
-        You are an SRE on Aether Games launch night. Use only the probe output.
+        You are an SRE on Blizzard launch night. Use only the probe output.
         Metrics: {{ steps.probe_metrics.output }}
         Traces: {{ steps.probe_traces.output }}
         Logs: {{ steps.probe_logs.output }}

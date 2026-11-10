@@ -1,5 +1,5 @@
 /**
- * Create a real Elastic Security case for the selected Aether fraud alert.
+ * Create a real Elastic Security case for the selected Blizzard fraud alert.
  *
  * POST /api/create-case  { title, description, severity, entity, region, signal, alertId }
  * GET  /api/create-case  { configured, casesHref }
@@ -93,7 +93,7 @@ export default async function handler(req, res) {
   }
 
   const body = await readJson(req);
-  const title = String(body.title || 'Aether Games fraud').slice(0, 160);
+  const title = String(body.title || 'Blizzard fraud').slice(0, 160);
   const severity = ['low', 'medium', 'high', 'critical'].includes(String(body.severity || '').toLowerCase())
     ? String(body.severity).toLowerCase()
     : 'high';
@@ -103,7 +103,7 @@ export default async function handler(req, res) {
     body.region ? `Region: ${body.region}` : '',
     body.signal ? `O11Y signal: ${body.signal}` : '',
     body.alertId ? `Demo alert: ${body.alertId}` : '',
-    'Opened from the Aether Games POV (Vercel).',
+    'Opened from the Blizzard × Elastic Serverless POC (Vercel).',
   ]
     .filter(Boolean)
     .join('\n');

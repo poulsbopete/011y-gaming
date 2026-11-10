@@ -16,7 +16,7 @@ import {
 const FOLDER = [
   {
     id: 'mm',
-    title: 'Aether — Matchmaking',
+    title: 'Blizzard — Matchmaking',
     source: 'Grafana',
     owner: 'unassigned',
     fields: 'wait_seconds, region',
@@ -24,7 +24,7 @@ const FOLDER = [
   },
   {
     id: 'sg',
-    title: 'Aether — Session gateway',
+    title: 'Blizzard — Session gateway',
     source: 'Grafana',
     owner: 'platform',
     fields: 'http_request_duration_seconds',
@@ -32,7 +32,7 @@ const FOLDER = [
   },
   {
     id: 'auth',
-    title: 'Aether — Auth & login',
+    title: 'Blizzard — Auth & login',
     source: 'Grafana',
     owner: 'identity',
     fields: 'aether_auth_logins_total',
@@ -40,7 +40,7 @@ const FOLDER = [
   },
   {
     id: 'store',
-    title: 'Aether — Store checkout',
+    title: 'Blizzard — Store checkout',
     source: 'Grafana',
     owner: 'unassigned',
     fields: 'checkout_duration_seconds',
@@ -48,7 +48,7 @@ const FOLDER = [
   },
   {
     id: 'slo',
-    title: 'Aether — Launch window SLO',
+    title: 'Blizzard — Launch window SLO',
     source: 'Grafana',
     owner: 'sre',
     fields: 'error_budget_remaining',
@@ -56,7 +56,7 @@ const FOLDER = [
   },
   {
     id: 'deps',
-    title: 'Aether — Dependency latency',
+    title: 'Blizzard — Dependency latency',
     source: 'Grafana',
     owner: 'unassigned',
     fields: 'dependency_duration_seconds',

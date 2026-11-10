@@ -26,7 +26,7 @@ export function Hero() {
 
       <nav className="relative z-10 flex items-center justify-between px-6 py-5 max-w-6xl mx-auto w-full">
         <div className="font-display text-lg font-extrabold tracking-tight text-fog">
-          Aether <span className="text-cyan">Games</span>
+          Blizzard <span className="text-cyan">× Elastic</span>
         </div>
         <div className="hidden sm:flex items-center gap-6 text-sm text-mist">
           <a href="#observability" className="hover:text-cyan transition-colors">Launch night</a>
@@ -38,12 +38,12 @@ export function Hero() {
       </nav>
 
       <div className="relative z-10 flex-1 flex flex-col justify-center px-6 pb-24 max-w-6xl mx-auto w-full">
-        <p className="rise-in text-xs uppercase tracking-[0.25em] text-cyan mb-5">Elastic × Gaming platforms</p>
+        <p className="rise-in text-xs uppercase tracking-[0.25em] text-cyan mb-5">November Serverless POC</p>
         <h1 className="rise-in font-display text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-fog leading-[0.95] max-w-3xl">
-          Aether Games
+          Blizzard
         </h1>
         <p className="rise-in-delay mt-6 text-lg md:text-xl text-mist max-w-xl leading-relaxed">
-          Bring Prometheus metrics, Grafana and Datadog dashboards, and alerts into Elastic — one plane for launch nights, at a better price point.
+          Prove Elastic Serverless Observability, Security, and Search for launch nights — migrate Grafana boards, correlate fraud, leave on-prem cluster ops behind.
         </p>
         <div className="rise-in-delay mt-10 flex flex-wrap gap-3">
           <PrimaryCta href={o11y}>Open live Observability</PrimaryCta>

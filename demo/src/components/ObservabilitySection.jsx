@@ -31,7 +31,7 @@ export function ObservabilitySection() {
     <Section
       id="observability"
       eyebrow="Live Observability"
-      title="Open the Aether platform project"
+      title="Open the Blizzard Observability project"
       lead="Deep links into the fixed Observability Serverless project used for demos — metrics, services, and dashboards."
     >
       <p className="font-mono text-[11px] text-mist/70 break-all mb-6">{es}</p>

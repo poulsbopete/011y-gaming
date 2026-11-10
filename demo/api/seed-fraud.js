@@ -1,5 +1,5 @@
 /**
- * Seed Aether Games fraud alerts (+ entity risk scores) into Elastic Security Serverless.
+ * Seed Blizzard fraud alerts (+ entity risk scores) into Elastic Security Serverless.
  *
  * Server-only env (never VITE_*):
  *   SECURITY_ES_URL / SECURITY_ES_API_KEY — required (Security project)
@@ -122,7 +122,7 @@ function buildAlert({
     user: { name: user },
     host: { name: host },
     source: { ip: sourceIp, geo: { region_name: region } },
-    labels: { studio: 'Aether Games', demo: 'vercel-fraud-seed' },
+    labels: { studio: 'Blizzard', demo: 'vercel-fraud-seed' },
     kibana: {
       alert: {
         rule: {
@@ -135,7 +135,7 @@ function buildAlert({
           description,
           producer: 'siem',
           consumer: 'siem',
-          tags: ['Aether Games', 'Fraud Demo', 'Sample Data'],
+          tags: ['Blizzard', 'Fraud Demo', 'Sample Data'],
           revision: 1,
           parameters: {},
           execution: { uuid: randomUUID() },
@@ -190,7 +190,7 @@ function buildRiskDoc({ entityType, name, score, alertCount }) {
 
 const FRAUD_CASES = [
   {
-    ruleName: 'Aether — Credential stuffing on account platform',
+    ruleName: 'Blizzard — Credential stuffing on account platform',
     ruleId: 'aether-fraud-credential-stuffing',
     severity: 'critical',
     riskScore: 99,
@@ -203,7 +203,7 @@ const FRAUD_CASES = [
     techniques: [{ id: 'T1110.004', name: 'Credential Stuffing' }],
   },
   {
-    ruleName: 'Aether — Multi-account abuse (shared device)',
+    ruleName: 'Blizzard — Multi-account abuse (shared device)',
     ruleId: 'aether-fraud-multi-account',
     severity: 'high',
     riskScore: 84,
@@ -216,7 +216,7 @@ const FRAUD_CASES = [
     techniques: [{ id: 'T1078', name: 'Valid Accounts' }],
   },
   {
-    ruleName: 'Aether — Payment fraud (stolen instrument)',
+    ruleName: 'Blizzard — Payment fraud (stolen instrument)',
     ruleId: 'aether-fraud-payment',
     severity: 'high',
     riskScore: 88,
@@ -229,7 +229,7 @@ const FRAUD_CASES = [
     techniques: [{ id: 'T1496', name: 'Resource Hijacking' }],
   },
   {
-    ruleName: 'Aether — Session hijack candidate',
+    ruleName: 'Blizzard — Session hijack candidate',
     ruleId: 'aether-fraud-session-hijack',
     severity: 'medium',
     riskScore: 61,
