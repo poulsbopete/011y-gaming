@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Upsert Vega visualizations + dashboard "Aether — Launch ops" (id: aether-launch-ops).
+ * Upsert Vega visualizations + dashboard "Blizzard — Launch ops" (id: aether-launch-ops).
  *
  * Loads ES_URL / ES_API_KEY from demo/.env.local (or the environment).
  */
@@ -262,9 +262,9 @@ function dashboardAttributes() {
   });
   return {
     attributes: {
-      title: 'Aether — Launch ops',
+      title: 'Blizzard — Launch ops',
       description:
-        'Vega launch-window board for matchmaking, auth, session-gateway, store, and aether-games-fleet. Seed OTLP from the Aether Games demo, then set Last 24h.',
+        'Vega launch-window board for matchmaking, auth, session-gateway, store, and aether-games-fleet. Seed OTLP from the Blizzard POC demo, then set Last 24h.',
       panelsJSON: JSON.stringify(panels),
       optionsJSON: JSON.stringify({
         useMargins: true,
