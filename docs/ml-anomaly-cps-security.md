@@ -6,6 +6,11 @@ Detect anomalous **auth login failures** on Observability Serverless with an ML
 anomaly detection job, then run a Kibana workflow that correlates those findings
 with Elastic Security alerts using **cross-project search (CPS)**.
 
+Fraud **Create case** (`demo/api/create-case.js`) opens an **Observability** case
+whose description embeds the CPS alias (`my-security-project-ac9463`), O11Y deep
+links, and a sample ES|QL against `alias:.alerts-security.alerts-default`. When
+`SECURITY_ES_*` is configured it also opens a matching Security case.
+
 | Piece | Where |
 | --- | --- |
 | ML job `aether-auth-failure-anomaly` | Observability (origin) |

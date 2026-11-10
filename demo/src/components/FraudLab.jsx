@@ -1,8 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Shield, AlertTriangle, FolderOpen, Crosshair } from 'lucide-react';
 import { ModuleHeader, DeepLinkBar, PrimaryCta } from './ui';
-import { kibanaSecurityUrl, getSecurityKibanaUrl } from '../lib/elastic-api';
+import { kibanaSecurityUrl, getSecurityKibanaUrl, getO11yKibanaUrl } from '../lib/elastic-api';
 import { apiUrl } from '../lib/apiBase';
+
+const CPS_ALIAS = import.meta.env.VITE_SECURITY_CPS_ALIAS || 'my-security-project-ac9463';
+
+function o11yCasesUrl() {
+  return `${getO11yKibanaUrl()}/app/observability/cases`;
+}
 
 const SEED_ALERTS = [
   {
@@ -95,11 +101,17 @@ export function FraudLab() {
         });
         return;
       }
+      const o11y = body.results?.o11y?.ok ? body.results.o11y : null;
+      const sec = body.results?.security?.ok ? body.results.security : null;
       setCaseNote({
         title: body.title || selected.title,
         id: body.id,
         href: body.href,
         status: body.status || 'open',
+        cpsAlias: body.cpsAlias || CPS_ALIAS,
+        message: body.message,
+        o11yHref: o11y?.href || body.o11yCasesHref || null,
+        securityHref: sec?.href || body.casesHref || null,
       });
     } catch (e) {
       setCaseNote({
@@ -144,22 +156,34 @@ export function FraudLab() {
       <ModuleHeader
         eyebrow="Account fraud"
         title="Gaming fraud on the same launch night"
-        subtitle="Credential stuffing, multi-account abuse, stolen checkout — Security stays its own project. Seed live alerts, then correlate with Observability auth and session signals."
+        subtitle="Credential stuffing, multi-account abuse, stolen checkout — Security stays its own project. Seed live alerts, open an Observability case that reflects CPS → Security, then correlate auth and session signals."
         actions={
           <PrimaryCta onClick={seedLiveFraud} disabled={seeding}>
             {seeding ? 'Seeding…' : 'Seed live Security alerts'}
           </PrimaryCta>
         }
       >
-        <DeepLinkBar
-          label="Security"
-          links={[
-            { href: kibanaSecurityUrl('alerts'), label: 'Alerts', primary: true },
-            { href: kibanaSecurityUrl('cases'), label: 'Cases' },
-            { href: kibanaSecurityUrl('entityAnalytics'), label: 'Entity analytics' },
-            { href: kibanaSecurityUrl('attacks'), label: 'Attacks' },
-          ]}
-        />
+        <div className="space-y-3">
+          <DeepLinkBar
+            label="Security"
+            links={[
+              { href: kibanaSecurityUrl('alerts'), label: 'Alerts', primary: true },
+              { href: kibanaSecurityUrl('cases'), label: 'Cases' },
+              { href: kibanaSecurityUrl('entityAnalytics'), label: 'Entity analytics' },
+              { href: kibanaSecurityUrl('attacks'), label: 'Attacks' },
+            ]}
+          />
+          <DeepLinkBar
+            label="Observability"
+            links={[
+              { href: o11yCasesUrl(), label: 'Cases (CPS)', primary: true },
+              {
+                href: `${getO11yKibanaUrl()}/app/apm/services/auth/overview?rangeFrom=now-24h&rangeTo=now`,
+                label: 'APM auth',
+              },
+            ]}
+          />
+        </div>
       </ModuleHeader>
 
       {seedMsg && (
@@ -248,6 +272,10 @@ export function FraudLab() {
                     {getSecurityKibanaUrl().replace(/^https?:\/\//, '').split('.')[0]}
                   </dd>
                 </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-mist">CPS alias</dt>
+                  <dd className="text-fog font-mono text-[10px] truncate max-w-[9rem]">{CPS_ALIAS}</dd>
+                </div>
               </dl>
 
               <div className="flex flex-col gap-2 mt-auto">
@@ -263,10 +291,18 @@ export function FraudLab() {
                   <Crosshair className="w-4 h-4" /> Isolate entity (sim)
                 </button>
                 <a
-                  href={kibanaSecurityUrl('cases')}
+                  href={o11yCasesUrl()}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-center text-xs text-cyan hover:text-amber mt-1"
+                >
+                  Open Observability Cases (CPS) →
+                </a>
+                <a
+                  href={kibanaSecurityUrl('cases')}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-center text-xs text-mist hover:text-amber"
                 >
                   Open live Security Cases →
                 </a>
@@ -279,9 +315,25 @@ export function FraudLab() {
               )}
               {caseNote && !caseNote.error && (
                 <p className="mt-4 text-xs text-cyan border border-cyan/30 rounded-md p-3">
-                  Case{' '}
-                  <span className="font-mono">{caseNote.id}</span> opened for “{caseNote.title}”.{' '}
-                  {caseNote.href ? (
+                  {caseNote.message || 'Case opened with CPS → Security context.'}{' '}
+                  <span className="font-mono">{caseNote.id}</span>
+                  {caseNote.cpsAlias ? (
+                    <>
+                      {' '}
+                      · CPS <span className="font-mono">{caseNote.cpsAlias}</span>
+                    </>
+                  ) : null}
+                  <br />
+                  {caseNote.o11yHref ? (
+                    <a
+                      href={caseNote.o11yHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-amber hover:text-cyan"
+                    >
+                      Observability case →
+                    </a>
+                  ) : caseNote.href ? (
                     <a
                       href={caseNote.href}
                       target="_blank"
@@ -290,6 +342,19 @@ export function FraudLab() {
                     >
                       Open in Kibana →
                     </a>
+                  ) : null}
+                  {caseNote.securityHref ? (
+                    <>
+                      {' · '}
+                      <a
+                        href={caseNote.securityHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-amber hover:text-cyan"
+                      >
+                        Security case →
+                      </a>
+                    </>
                   ) : null}
                 </p>
               )}
