@@ -2,7 +2,7 @@ import { Crosshair, Gauge, Search, Shield } from 'lucide-react';
 import { ModuleHeader, PrimaryCta, GhostCta, DeepLinkBar } from './ui';
 import {
   getO11yKibanaUrl,
-  getSecurityKibanaUrl,
+  kibanaSecurityUrl,
   kibanaWorkflowsLibraryUrl,
   kibanaWorkflowUrl,
   kibanaDashboardViewUrl,
@@ -72,7 +72,7 @@ const WEEKS = [
 
 export function ServerlessPoc() {
   const kibana = getO11yKibanaUrl();
-  const security = getSecurityKibanaUrl();
+  const securityAlerts = kibanaSecurityUrl('alerts');
   const libraryHref = kibanaWorkflowsLibraryUrl(kibana);
   const hunterHref = kibanaWorkflowUrl(kibana, BROKEN_WIDGET_HUNTER_WORKFLOW_ID);
   const launchHref = kibanaWorkflowUrl(kibana, LAUNCH_NIGHT_WORKFLOW_ID);
@@ -91,7 +91,7 @@ export function ServerlessPoc() {
               Workflows Template Library
             </PrimaryCta>
             <GhostCta href={hunterHref}>Broken Widget Hunter</GhostCta>
-            <GhostCta href={security}>Open Security project</GhostCta>
+            <GhostCta href={securityAlerts}>Security alerts</GhostCta>
           </div>
         }
       >

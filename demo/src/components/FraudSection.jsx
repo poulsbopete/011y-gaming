@@ -11,12 +11,11 @@ const THREATS = [
 export function FraudSection() {
   const es = getSecurityEsUrl();
   const links = [
-    { label: 'Security overview', href: kibanaSecurityUrl('overview') },
     { label: 'Alerts', href: kibanaSecurityUrl('alerts') },
     { label: 'Cases', href: kibanaSecurityUrl('cases') },
-    { label: 'Detection rules', href: kibanaSecurityUrl('rules') },
     { label: 'Entity analytics', href: kibanaSecurityUrl('entityAnalytics') },
     { label: 'Attacks', href: kibanaSecurityUrl('attacks') },
+    { label: 'Detection rules', href: kibanaSecurityUrl('rules') },
   ];
 
   return (
